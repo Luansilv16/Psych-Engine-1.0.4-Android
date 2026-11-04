@@ -34,6 +34,7 @@ class CreditsState extends MusicBeatState
 		add(grpOptions);
 
 		#if MODS_ALLOWED
+		pushModCreditsToList('');
 		for (mod in Mods.parseList().enabled) pushModCreditsToList(mod);
 		#end
 
@@ -244,10 +245,8 @@ class CreditsState extends MusicBeatState
 		}
 		else descText.visible = descBox.visible = false;
 	}
-	
 	{
 		var creditsFile:String = Paths.mods(folder + '/data/credits.txt');
-		
 		#if MODS_ALLOWED
 	function pushModCreditsToList(folder:String)
 	{
