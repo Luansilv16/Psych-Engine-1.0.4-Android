@@ -7,7 +7,7 @@ permissions:
 
 env:
   PROJECT_NAME: PsychEngine
-  REPO_PATH: kittycathy233/FNF-PsychEngine-Mobile-1.0.4
+  REPO_PATH: nyxen-roaring/Psych-Engine-1.0.4-Android
 
 jobs:
   get-commit-hash:
