@@ -243,11 +243,9 @@ class CreditsState extends MusicBeatState
 			descBox.setGraphicSize(Std.int(descText.width + 20), Std.int(descText.height + 25));
 			descBox.updateHitbox();
 		}
-		else descText.visible = descBox.visible = false;
+				else descText.visible = descBox.visible = false;
 	}
-	{
-		var creditsFile:String = Paths.mods(folder + '/data/credits.txt');
-		#if MODS_ALLOWED
+	    #if MODS_ALLOWED
 	function pushModCreditsToList(folder:String)
 	{
 		var creditsFile:String = Paths.mods((folder.length > 0 ? folder + '/' : '') + 'data/credits.txt');
