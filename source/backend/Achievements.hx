@@ -1,5 +1,4 @@
 package backend;
-
 #if ACHIEVEMENTS_ALLOWED
 import objects.AchievementPopup;
 import haxe.Exception;
