@@ -166,7 +166,11 @@ class CreditsState extends MusicBeatState
 			}
 
 			if(controls.ACCEPT && (creditsStuff[curSelected][3] == null || creditsStuff[curSelected][3].length > 4)) {
-				CoolUtil.browserLoad(creditsStuff[curSelected][3]);
+	#if ACHIEVEMENTS_ALLOWED
+	if(creditsStuff[curSelected][0] == "Nyxen Roaring")
+		Achievements.unlock('subscribe_nyx');
+	#end
+	CoolUtil.browserLoad(creditsStuff[curSelected][3]);
 			}
 			if (controls.BACK)
 			{
