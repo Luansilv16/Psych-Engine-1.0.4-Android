@@ -51,6 +51,8 @@ personal_best: "MEJOR PUNTUACIÓN: {1} ({2}%)"
 freeplay_difficulty: "Dificultad:"
 freeplay_score: "Puntos:"
 freeplay_composer: "Compositor:"
+achievements_unlocked: "Logros: {1} / {2}"
+achievements_none: "No hay logros"
 freeplay_tip: "Pulsa {1} para escuchar la canción / Pulsa {2} para abrir el menú de modificadores / Pulsa {3} para borrar tu puntuación."
 
 musicplayer_playing: "REPRODUCIENDO: {1}"
