@@ -25,16 +25,18 @@ package mobile.backend;
 import flixel.FlxCamera;
 import flixel.math.FlxPoint;
 import flixel.system.scaleModes.BaseScaleMode;
+import openfl.events.Event;
 
 /**
- * Widescreen estilo V-Slice (sin estirar la imagen).
+ * Widescreen estilo V-Slice (sin estirar la imagen), adaptado a cualquier celular.
  *
- * - La imagen se escala de forma UNIFORME según la altura (720).
- * - Si la pantalla es más ancha que 16:9, las cámaras se agrandan hacia
- *   los lados y el contenido original (1280x720) queda centrado.
- * - `gameCutoutSize.x` = píxeles extra que hay a cada lado (en coords del juego).
- *
- * @author: Karim Akra (base) / modificado para NixerEngine
+ * - Se escala de forma UNIFORME (la imagen nunca se deforma).
+ * - Pantalla más ancha que 16:9 (la mayoría de celulares): se rellena todo el ancho
+ *   y el contenido 1280x720 queda centrado. `gameCutoutSize.x` = píxeles extra a cada lado.
+ * - Pantalla más cuadrada que 16:9 (tablets): el juego se ajusta al ancho y quedan
+ *   franjas negras arriba y abajo.
+ * - Si el jugador desactiva "Modo Pantalla Ancha" en Opciones, vuelve el modo clásico
+ *   con bordes negros. El cambio se aplica al momento.
  */
 class MobileScaleMode extends BaseScaleMode
 {
@@ -44,6 +46,8 @@ class MobileScaleMode extends BaseScaleMode
 	public static var gameCutoutSize(default, null):FlxPoint = FlxPoint.get();
 
 	static var hooked:Bool = false;
+	static var lastWide:Bool = false;
+	static var lastCut:Int = 0;
 
 	public function new()
 	{
@@ -53,21 +57,31 @@ class MobileScaleMode extends BaseScaleMode
 			hooked = true;
 			// Cualquier cámara nueva (camHUD, camOther, etc.) se ajusta sola.
 			FlxG.cameras.cameraAdded.add(fitCamera);
+			// Si el jugador cambia la opción, se re-mide la pantalla al momento.
+			FlxG.signals.postUpdate.add(checkPref);
 		}
 	}
 
-	// Siempre activo (ignora la casilla de Opciones). Para volver a usar la
-	// casilla, cambia el cuerpo por: ClientPrefs.data != null && ClientPrefs.data.wideScreen && allowWideScreen
 	static inline function isWide():Bool
-		return allowWideScreen;
+		return ClientPrefs.data != null && ClientPrefs.data.wideScreen && allowWideScreen;
+
+	static function checkPref():Void
+	{
+		var wide:Bool = isWide();
+		if (wide == lastWide)
+			return;
+		lastWide = wide;
+		// Dispara el mismo evento que un cambio de tamaño de ventana
+		FlxG.stage.dispatchEvent(new Event(Event.RESIZE));
+	}
 
 	override function updateGameSize(Width:Int, Height:Int):Void
 	{
 		if (isWide())
 		{
-			// Ocupa toda la ventana; la escala uniforme se calcula en updateScaleOffset.
+			var s:Float = Math.min(Width / FlxG.width, Height / FlxG.height);
 			gameSize.x = Width;
-			gameSize.y = Height;
+			gameSize.y = Math.floor(FlxG.height * s);
 		}
 		else
 		{
@@ -91,9 +105,10 @@ class MobileScaleMode extends BaseScaleMode
 	{
 		if (isWide())
 		{
-			// Escala uniforme por altura (como V-Slice), sin deformar.
-			scale.x = scale.y = gameSize.y / FlxG.height;
-			offset.set(0, 0);
+			// Escala uniforme: nunca se deforma
+			scale.x = scale.y = Math.min(deviceSize.x / FlxG.width, deviceSize.y / FlxG.height);
+			offset.x = 0;
+			offset.y = Math.ceil((deviceSize.y - FlxG.height * scale.y) / 2);
 		}
 		else
 			super.updateScaleOffset();
@@ -102,7 +117,10 @@ class MobileScaleMode extends BaseScaleMode
 	override function updateGamePosition():Void
 	{
 		if (isWide())
-			FlxG.game.x = FlxG.game.y = 0;
+		{
+			FlxG.game.x = offset.x;
+			FlxG.game.y = offset.y;
+		}
 		else
 			super.updateGamePosition();
 	}
@@ -119,13 +137,13 @@ class MobileScaleMode extends BaseScaleMode
 		else
 			gameCutoutSize.set(0, 0);
 
+		lastWide = isWide();
+
 		for (cam in FlxG.cameras.list)
 			fitCamera(cam);
 
 		lastCut = Std.int(gameCutoutSize.x);
 	}
-
-	static var lastCut:Int = 0;
 
 	/**
 	 * - Cámara principal (la primera): se agranda a los lados y su scroll se corre
@@ -156,10 +174,15 @@ class MobileScaleMode extends BaseScaleMode
 		}
 		else
 		{
-			if (cam.width != FlxG.width)
+			// Cámara nueva (x=0, ancho normal) o ya ajustada antes por nosotros
+			var fresh:Bool = (cam.width == FlxG.width && cam.x == 0);
+			var fitted:Bool = (cam.width == FlxG.width + lastCut && Std.int(cam.x) == lastCut);
+			if (!fresh && !fitted)
 				return; // cámara con tamaño propio, no se toca
-			if (cam.x == 0 || Std.int(cam.x) == lastCut)
-				cam.x = newCut;
+
+			// Se mueve al centro y se extiende hacia la derecha, así no se recorta nada
+			cam.x = newCut;
+			cam.width = FlxG.width + newCut;
 		}
 	}
 
