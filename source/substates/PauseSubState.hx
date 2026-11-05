@@ -560,7 +560,7 @@ class PauseSubState extends MusicBeatSubstate
 			if (!item.visible) continue;
 
 			var cy:Float = FlxG.height / 2 + d * 68;
-			var baseX:Float = 70 - 6 * d * d;
+			var baseX:Float = Math.max(24, 70 - 3 * d * d); // nunca se sale por la izquierda
 			var avail:Float = edgeAt(cy) - baseX - 30;
 			var sc:Float = Math.max(0.5, Math.min(1, avail / itemW[i]));
 			item.scale.set(sc, sc);
