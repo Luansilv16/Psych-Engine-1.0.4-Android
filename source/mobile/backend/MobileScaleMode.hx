@@ -48,6 +48,20 @@ class MobileScaleMode extends BaseScaleMode
 	static var hooked:Bool = false;
 	static var lastWide:Bool = false;
 	static var lastCut:Int = 0;
+	static var fullCams:Array<FlxCamera> = [];
+
+	/**
+	 * Marca una cámara como "de ancho completo" (x = 0, tan ancha como la pantalla real).
+	 * Se usa para los controles táctiles: así los botones y el hitbox llegan a los bordes.
+	 */
+	public static function makeFullWidth(cam:FlxCamera):Void
+	{
+		if (cam == null)
+			return;
+		if (!fullCams.contains(cam))
+			fullCams.push(cam);
+		fitCamera(cam);
+	}
 
 	public function new()
 	{
@@ -139,6 +153,8 @@ class MobileScaleMode extends BaseScaleMode
 
 		lastWide = isWide();
 
+		fullCams = fullCams.filter(function(c:FlxCamera) return FlxG.cameras.list.contains(c));
+
 		for (cam in FlxG.cameras.list)
 			fitCamera(cam);
 
@@ -158,6 +174,13 @@ class MobileScaleMode extends BaseScaleMode
 			return;
 
 		var newCut:Int = Std.int(gameCutoutSize.x);
+
+		if (fullCams.contains(cam))
+		{
+			cam.x = 0;
+			cam.width = FlxG.width + newCut * 2;
+			return;
+		}
 
 		if (FlxG.cameras.list.indexOf(cam) == 0)
 		{
