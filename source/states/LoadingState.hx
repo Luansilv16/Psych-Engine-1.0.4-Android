@@ -88,7 +88,8 @@ class LoadingState extends MusicBeatState
 		add(barGroup);
 
 		var barBack:FlxSprite = new FlxSprite(0, 660).makeGraphic(1, 1, FlxColor.BLACK);
-		barBack.scale.set(FlxG.width - 300, 25);
+		var cutX:Float = mobile.backend.MobileScaleMode.gameCutoutSize.x;
+		barBack.scale.set(FlxG.width + cutX * 2 - 300, 25);
 		barBack.updateHitbox();
 		barBack.screenCenter(X);
 		barGroup.add(barBack);
@@ -139,9 +140,10 @@ class LoadingState extends MusicBeatState
 		#if PSYCH_WATERMARKS // PSYCH LOADING SCREEN
 		var bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		bg.antialiasing = ClientPrefs.data.antialiasing;
-		bg.setGraphicSize(Std.int(FlxG.width));
+		bg.setGraphicSize(Std.int(FlxG.width + cutX * 2));
 		bg.color = 0xFFD16FFF;
 		bg.updateHitbox();
+		bg.x = -cutX;
 		addBehindBar(bg);
 	
 		loadingText = new FlxText(520, 600, 400, Language.getPhrase('now_loading', 'Now Loading', ['...']), 32);
@@ -160,7 +162,7 @@ class LoadingState extends MusicBeatState
 
 		#else // BASE GAME LOADING SCREEN
 		var bg = new FlxSprite().makeGraphic(1, 1, 0xFFCAFF4D);
-		bg.scale.set(FlxG.width, FlxG.height);
+		bg.scale.set(FlxG.width + cutX * 2, FlxG.height);
 		bg.updateHitbox();
 		bg.screenCenter();
 		addBehindBar(bg);
