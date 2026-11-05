@@ -2,6 +2,7 @@ package options;
 
 import states.MainMenuState;
 import backend.StageData;
+import mobile.backend.MobileScaleMode;
 
 class OptionsState extends MusicBeatState
 {
@@ -58,6 +59,12 @@ class OptionsState extends MusicBeatState
 		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		bg.antialiasing = ClientPrefs.data.antialiasing;
 		bg.color = 0xFFea71fd;
+		bg.updateHitbox();
+
+		// Que el fondo cubra toda la pantalla (pantalla ancha)
+		var wideW:Float = FlxG.width + MobileScaleMode.gameCutoutSize.x * 2;
+		var bgScale:Float = Math.max(wideW / bg.width, FlxG.height / bg.height);
+		bg.setGraphicSize(Std.int(bg.width * bgScale));
 		bg.updateHitbox();
 
 		bg.screenCenter();
