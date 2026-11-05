@@ -1,0 +1,10 @@
+{
+	"items": [
+		{ "id": "story_mode",    "image": "mainmenu/menu_story_mode",    "action": "story_mode",    "column": "center", "visible": false },
+		{ "id": "freeplay",      "image": "mainmenu/menu_freeplay",      "action": "freeplay",      "column": "center", "visible": true },
+		{ "id": "mods",          "image": "mainmenu/menu_mods",          "action": "mods",          "column": "center", "visible": true },
+		{ "id": "credits",       "image": "mainmenu/menu_credits",       "action": "credits",       "column": "center", "visible": true },
+		{ "id": "achievements",  "image": "mainmenu/menu_achievements",  "action": "achievements",  "column": "left",   "visible": true },
+		{ "id": "options",       "image": "mainmenu/menu_options",       "action": "options",       "column": "right",  "visible": true }
+	]
+}
