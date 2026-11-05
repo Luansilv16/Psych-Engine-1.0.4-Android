@@ -40,9 +40,9 @@ class Hitbox extends MobileInputManager implements IMobileControls
 	final offsetSec:Int = (ClientPrefs.data.hitboxPos ? 0 : Std.int(FlxG.height / 4));
 
 	// Pantalla ancha: el hitbox ocupa TODO el ancho real de la pantalla.
-	// (La cámara de los controles empieza 'cut' píxeles a la derecha, por eso ox es negativo.)
+	// (La cámara de los controles ocupa toda la pantalla, así que empieza en x = 0.)
 	final totalW:Int = FlxG.width + Std.int(mobile.backend.MobileScaleMode.gameCutoutSize.x) * 2;
-	final ox:Float = -mobile.backend.MobileScaleMode.gameCutoutSize.x;
+	final ox:Float = 0;
 
 	public var buttonLeft:TouchButton = new TouchButton(0, 0, [MobileInputID.HITBOX_LEFT, MobileInputID.NOTE_LEFT]);
 	public var buttonDown:TouchButton = new TouchButton(0, 0, [MobileInputID.HITBOX_DOWN, MobileInputID.NOTE_DOWN]);
@@ -249,4 +249,15 @@ class Hitbox extends MobileInputManager implements IMobileControls
 
 		return FlxG.bitmap.add(bitmap);
 	}
+
+	@:noCompletion
+	override function set_cameras(Value:Array<flixel.FlxCamera>):Array<flixel.FlxCamera>
+	{
+		// Los controles táctiles usan una cámara que ocupa toda la pantalla
+		if (Value != null)
+			for (cam in Value)
+				mobile.backend.MobileScaleMode.makeFullWidth(cam);
+		return super.set_cameras(Value);
+	}
 }
+
