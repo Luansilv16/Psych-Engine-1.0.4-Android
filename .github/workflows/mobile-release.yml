@@ -7,7 +7,7 @@ permissions:
 
 env:
   PROJECT_NAME: NixerEngine
-  REPO_PATH: nyxen-roaring/Psych-Engine-1.0.4-Android
+  REPO_PATH: nyxen-roaring/NixerEngine-Android
 
 jobs:
   get-commit-hash:
