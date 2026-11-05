@@ -122,6 +122,23 @@ class TouchPad extends MobileInputManager implements IMobileControls
 			case NONE: // nothing
 		}
 
+		// Pantalla ancha: los botones de la izquierda se pegan al borde izquierdo de la pantalla
+		// y los de la derecha al borde derecho (la cámara de controles empieza 'cut' px a la derecha).
+		var cut:Float = mobile.backend.MobileScaleMode.gameCutoutSize.x;
+		if (cut > 0)
+		{
+			for (fieldName in Reflect.fields(this))
+			{
+				var field = Reflect.field(this, fieldName);
+				if (Std.isOfType(field, TouchButton) && !fieldName.toLowerCase().contains('extra'))
+				{
+					var btn:TouchButton = cast field;
+					if (members.contains(btn))
+						btn.x += (btn.x + btn.width / 2 < FlxG.width / 2) ? -cut : cut;
+				}
+			}
+		}
+
 		alpha = ClientPrefs.data.controlsAlpha;
 		scrollFactor.set();
 		updateTrackedButtons();

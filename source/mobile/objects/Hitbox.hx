@@ -39,6 +39,11 @@ class Hitbox extends MobileInputManager implements IMobileControls
 	final offsetFir:Int = (ClientPrefs.data.hitboxPos ? Std.int(FlxG.height / 4) * 3 : 0);
 	final offsetSec:Int = (ClientPrefs.data.hitboxPos ? 0 : Std.int(FlxG.height / 4));
 
+	// Pantalla ancha: el hitbox ocupa TODO el ancho real de la pantalla.
+	// (La cámara de los controles empieza 'cut' píxeles a la derecha, por eso ox es negativo.)
+	final totalW:Int = FlxG.width + Std.int(mobile.backend.MobileScaleMode.gameCutoutSize.x) * 2;
+	final ox:Float = -mobile.backend.MobileScaleMode.gameCutoutSize.x;
+
 	public var buttonLeft:TouchButton = new TouchButton(0, 0, [MobileInputID.HITBOX_LEFT, MobileInputID.NOTE_LEFT]);
 	public var buttonDown:TouchButton = new TouchButton(0, 0, [MobileInputID.HITBOX_DOWN, MobileInputID.NOTE_DOWN]);
 	public var buttonUp:TouchButton = new TouchButton(0, 0, [MobileInputID.HITBOX_UP, MobileInputID.NOTE_UP]);
@@ -69,25 +74,25 @@ class Hitbox extends MobileInputManager implements IMobileControls
 		switch (extraMode)
 		{
 			case NONE:
-				add(buttonLeft = createHint(0, 0, Std.int(FlxG.width / 4), FlxG.height, 0xFFC24B99));
-				add(buttonDown = createHint(FlxG.width / 4, 0, Std.int(FlxG.width / 4), FlxG.height, 0xFF00FFFF));
-				add(buttonUp = createHint(FlxG.width / 2, 0, Std.int(FlxG.width / 4), FlxG.height, 0xFF12FA05));
-				add(buttonRight = createHint((FlxG.width / 2) + (FlxG.width / 4), 0, Std.int(FlxG.width / 4), FlxG.height, 0xFFF9393F));
+				add(buttonLeft = createHint(ox + (0), 0, Std.int(totalW / 4), FlxG.height, 0xFFC24B99));
+				add(buttonDown = createHint(ox + (totalW / 4), 0, Std.int(totalW / 4), FlxG.height, 0xFF00FFFF));
+				add(buttonUp = createHint(ox + (totalW / 2), 0, Std.int(totalW / 4), FlxG.height, 0xFF12FA05));
+				add(buttonRight = createHint(ox + ((totalW / 2) + (totalW / 4)), 0, Std.int(totalW / 4), FlxG.height, 0xFFF9393F));
 			case SINGLE:
-				add(buttonLeft = createHint(0, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height / 4) * 3, 0xFFC24B99));
-				add(buttonDown = createHint(FlxG.width / 4, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height / 4) * 3, 0xFF00FFFF));
-				add(buttonUp = createHint(FlxG.width / 2, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height / 4) * 3, 0xFF12FA05));
-				add(buttonRight = createHint((FlxG.width / 2) + (FlxG.width / 4), offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height / 4) * 3,
+				add(buttonLeft = createHint(ox + (0), offsetSec, Std.int(totalW / 4), Std.int(FlxG.height / 4) * 3, 0xFFC24B99));
+				add(buttonDown = createHint(ox + (totalW / 4), offsetSec, Std.int(totalW / 4), Std.int(FlxG.height / 4) * 3, 0xFF00FFFF));
+				add(buttonUp = createHint(ox + (totalW / 2), offsetSec, Std.int(totalW / 4), Std.int(FlxG.height / 4) * 3, 0xFF12FA05));
+				add(buttonRight = createHint(ox + ((totalW / 2) + (totalW / 4)), offsetSec, Std.int(totalW / 4), Std.int(FlxG.height / 4) * 3,
 					0xFFF9393F));
-				add(buttonExtra = createHint(0, offsetFir, FlxG.width, Std.int(FlxG.height / 4), 0xFF0066FF));
+				add(buttonExtra = createHint(ox + (0), offsetFir, totalW, Std.int(FlxG.height / 4), 0xFF0066FF));
 			case DOUBLE:
-				add(buttonLeft = createHint(0, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height / 4) * 3, 0xFFC24B99));
-				add(buttonDown = createHint(FlxG.width / 4, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height / 4) * 3, 0xFF00FFFF));
-				add(buttonUp = createHint(FlxG.width / 2, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height / 4) * 3, 0xFF12FA05));
-				add(buttonRight = createHint((FlxG.width / 2) + (FlxG.width / 4), offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height / 4) * 3,
+				add(buttonLeft = createHint(ox + (0), offsetSec, Std.int(totalW / 4), Std.int(FlxG.height / 4) * 3, 0xFFC24B99));
+				add(buttonDown = createHint(ox + (totalW / 4), offsetSec, Std.int(totalW / 4), Std.int(FlxG.height / 4) * 3, 0xFF00FFFF));
+				add(buttonUp = createHint(ox + (totalW / 2), offsetSec, Std.int(totalW / 4), Std.int(FlxG.height / 4) * 3, 0xFF12FA05));
+				add(buttonRight = createHint(ox + ((totalW / 2) + (totalW / 4)), offsetSec, Std.int(totalW / 4), Std.int(FlxG.height / 4) * 3,
 					0xFFF9393F));
-				add(buttonExtra2 = createHint(Std.int(FlxG.width / 2), offsetFir, Std.int(FlxG.width / 2), Std.int(FlxG.height / 4), 0xA6FF00));
-				add(buttonExtra = createHint(0, offsetFir, Std.int(FlxG.width / 2), Std.int(FlxG.height / 4), 0xFF0066FF));
+				add(buttonExtra2 = createHint(ox + (Std.int(totalW / 2)), offsetFir, Std.int(totalW / 2), Std.int(FlxG.height / 4), 0xA6FF00));
+				add(buttonExtra = createHint(ox + (0), offsetFir, Std.int(totalW / 2), Std.int(FlxG.height / 4), 0xFF0066FF));
 		}
 
 		for (button in Reflect.fields(this))
