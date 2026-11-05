@@ -56,8 +56,10 @@ class MobileScaleMode extends BaseScaleMode
 		}
 	}
 
+	// Siempre activo (ignora la casilla de Opciones). Para volver a usar la
+	// casilla, cambia el cuerpo por: ClientPrefs.data != null && ClientPrefs.data.wideScreen && allowWideScreen
 	static inline function isWide():Bool
-		return ClientPrefs.data != null && ClientPrefs.data.wideScreen && allowWideScreen;
+		return allowWideScreen;
 
 	override function updateGameSize(Width:Int, Height:Int):Void
 	{
