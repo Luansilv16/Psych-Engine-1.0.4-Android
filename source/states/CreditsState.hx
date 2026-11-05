@@ -39,8 +39,9 @@ class CreditsState extends MusicBeatState
 		#end
 
 		var defaultList:Array<Array<String>> = [ //Name - Icon name - Description - Link - BG Color
-			['Who Built the Port'],
+			['NixerEngine Dev'],
 			["Nyxen Roaring", "nyx", "Who built the port? A fucking Chilean piece of shit.", "https://youtube.com/@nyxen-roaring-original", "2B2B47"],
+			["Toji", "toji", "The Engine Tester, thank you, sweetheart.", "https://x.com/Ahllo_sb8pz", "393939"],
 			[''],
 			['Mobile Porting Team'],
 			['HomuHomu833',			'homura',             'Head Porter of Psych Engine and Author of linc_luajit-rewriten',                       'https://youtube.com/@HomuHomu833',		'FFE7C0'],
