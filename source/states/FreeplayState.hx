@@ -65,6 +65,11 @@ class FreeplayState extends MusicBeatState
 	var leftPanel:FlxSprite;
 	var composerText:FlxText;
 	var songTexts:Array<FlxText> = [];
+	var songTextW:Array<Float> = [];
+	var artBG:FlxSprite;
+	var edgeTop:Float = 400;    // x del borde diagonal arriba
+	var edgeBottom:Float = 240; // x del borde diagonal abajo
+	var panelTextX:Float = 0;
 
 	inline function pin(o:FlxObject):Void
 		o.scrollFactor.set();
@@ -104,7 +109,9 @@ class FreeplayState extends MusicBeatState
 				{
 					colors = [146, 113, 253];
 				}
-				addSong(song[0], i, song[1], FlxColor.fromRGB(colors[0], colors[1], colors[2]));
+				var songData:Array<Dynamic> = song;
+				var songComposer:String = (songData.length > 3 && songData[3] != null) ? Std.string(songData[3]) : '';
+				addSong(song[0], i, song[1], FlxColor.fromRGB(colors[0], colors[1], colors[2]), songComposer);
 			}
 		}
 		Mods.loadTopMod();
@@ -121,20 +128,25 @@ class FreeplayState extends MusicBeatState
 
 		var fontPath:String = Paths.fileExists('fonts/freeplay.ttf', AssetType.FONT) ? Paths.font('freeplay.ttf') : Paths.font('vcr.ttf');
 
-		// ---------- Fondo ----------
-		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
-		bg.antialiasing = ClientPrefs.data.antialiasing;
-		var bgScale:Float = Math.max(W / bg.width, H / bg.height);
-		bg.setGraphicSize(Std.int(bg.width * bgScale));
-		bg.updateHitbox();
-		bg.setPosition((W - bg.width) / 2, (H - bg.height) / 2);
+		// Los PNG de diseño miden 2164x1080: se escalan a la altura de la pantalla
+		var imgScale:Float = H / 1080;
+
+		// ---------- Fondo (assets/images/freeplay/bg.png) ----------
+		var hasBgPng:Bool = Paths.fileExists('images/freeplay/bg.png', AssetType.IMAGE);
+		artBG = new FlxSprite().loadGraphic(Paths.image(hasBgPng ? 'freeplay/bg' : 'menuDesat'));
+		artBG.antialiasing = ClientPrefs.data.antialiasing;
+		var bgScale:Float = Math.max(W / artBG.width, H / artBG.height);
+		artBG.setGraphicSize(Std.int(artBG.width * bgScale));
+		artBG.updateHitbox();
+		artBG.setPosition((W - artBG.width) / 2, (H - artBG.height) / 2);
+		pin(artBG);
+		add(artBG);
+
+		// Capa con el color de la canción (suave, para que no oscurezca)
+		bg = new FlxSprite().makeGraphic(Std.int(W), Std.int(H), FlxColor.WHITE);
+		bg.alpha = 0.45;
 		pin(bg);
 		add(bg);
-
-		var darkOverlay:FlxSprite = new FlxSprite().makeGraphic(Std.int(W), Std.int(H), FlxColor.BLACK);
-		darkOverlay.alpha = 0.72;
-		pin(darkOverlay);
-		add(darkOverlay);
 
 		// ---------- Arte del personaje (derecha) ----------
 		artSprite = new FlxSprite();
@@ -143,13 +155,28 @@ class FreeplayState extends MusicBeatState
 		pin(artSprite);
 		add(artSprite);
 
-		// ---------- Panel izquierdo inclinado ----------
-		leftPanel = new FlxSprite().makeGraphic(420, Std.int(H), FlxColor.TRANSPARENT, true);
-		FlxSpriteUtil.drawPolygon(leftPanel, [
-			FlxPoint.get(0, 0), FlxPoint.get(400, 0),
-			FlxPoint.get(240, H), FlxPoint.get(0, H)
-		], 0xFF000000);
-		FlxSpriteUtil.drawLine(leftPanel, 400, 0, 240, H, {thickness: 8, color: 0xFF3A1BB5});
+		// ---------- Panel izquierdo (assets/images/freeplay/panel_left.png) ----------
+		if (Paths.fileExists('images/freeplay/panel_left.png', AssetType.IMAGE))
+		{
+			leftPanel = new FlxSprite().loadGraphic(Paths.image('freeplay/panel_left'));
+			leftPanel.antialiasing = ClientPrefs.data.antialiasing;
+			leftPanel.scale.set(imgScale, imgScale);
+			leftPanel.updateHitbox();
+			leftPanel.setPosition(0, 0);
+			edgeTop = 675 * imgScale;
+			edgeBottom = 410 * imgScale;
+		}
+		else
+		{
+			leftPanel = new FlxSprite().makeGraphic(420, Std.int(H), FlxColor.TRANSPARENT, true);
+			FlxSpriteUtil.drawPolygon(leftPanel, [
+				FlxPoint.get(0, 0), FlxPoint.get(400, 0),
+				FlxPoint.get(240, H), FlxPoint.get(0, H)
+			], 0xFF000000);
+			FlxSpriteUtil.drawLine(leftPanel, 400, 0, 240, H, {thickness: 8, color: 0xFF3A1BB5});
+			edgeTop = 400;
+			edgeBottom = 240;
+		}
 		pin(leftPanel);
 		add(leftPanel);
 
@@ -164,6 +191,7 @@ class FreeplayState extends MusicBeatState
 			songText.antialiasing = ClientPrefs.data.antialiasing;
 			songText.visible = songText.active = false;
 			pin(songText);
+			songTextW.push(songText.width);
 			songTexts.push(songText);
 			add(songText);
 
@@ -178,20 +206,33 @@ class FreeplayState extends MusicBeatState
 		}
 		WeekData.setDirectoryFromWeek();
 
-		// ---------- Panel superior derecho ----------
-		var panelW:Float = 450;
-		var panelH:Float = 72;
-		scoreBG = new FlxSprite(W - panelW, 0).makeGraphic(Std.int(panelW), Std.int(panelH), FlxColor.TRANSPARENT, true);
-		FlxSpriteUtil.drawPolygon(scoreBG, [
-			FlxPoint.get(0, 0), FlxPoint.get(panelW, 0),
-			FlxPoint.get(panelW, panelH), FlxPoint.get(38, panelH)
-		], 0xFF000000);
-		FlxSpriteUtil.drawLine(scoreBG, 0, 0, 38, panelH, {thickness: 4, color: FlxColor.WHITE});
-		FlxSpriteUtil.drawLine(scoreBG, 38, panelH - 2, panelW, panelH - 2, {thickness: 4, color: FlxColor.WHITE});
+		// ---------- Panel superior derecho (assets/images/freeplay/panel_right.png) ----------
+		if (Paths.fileExists('images/freeplay/panel_right.png', AssetType.IMAGE))
+		{
+			scoreBG = new FlxSprite().loadGraphic(Paths.image('freeplay/panel_right'));
+			scoreBG.antialiasing = ClientPrefs.data.antialiasing;
+			scoreBG.scale.set(imgScale, imgScale);
+			scoreBG.updateHitbox();
+			scoreBG.setPosition(W - scoreBG.width, 0);
+			panelTextX = W - (2164 - 1490) * imgScale;
+		}
+		else
+		{
+			var panelW:Float = 450;
+			var panelH:Float = 72;
+			scoreBG = new FlxSprite(W - panelW, 0).makeGraphic(Std.int(panelW), Std.int(panelH), FlxColor.TRANSPARENT, true);
+			FlxSpriteUtil.drawPolygon(scoreBG, [
+				FlxPoint.get(0, 0), FlxPoint.get(panelW, 0),
+				FlxPoint.get(panelW, panelH), FlxPoint.get(38, panelH)
+			], 0xFF000000);
+			FlxSpriteUtil.drawLine(scoreBG, 0, 0, 38, panelH, {thickness: 4, color: FlxColor.WHITE});
+			FlxSpriteUtil.drawLine(scoreBG, 38, panelH - 2, panelW, panelH - 2, {thickness: 4, color: FlxColor.WHITE});
+			panelTextX = W - panelW + 54;
+		}
 		pin(scoreBG);
 		add(scoreBG);
 
-		diffText = new FlxText(scoreBG.x + 54, 6, 0, "", 24);
+		diffText = new FlxText(panelTextX, 6, 0, "", 24);
 		diffText.setFormat(fontPath, 24, FlxColor.WHITE, LEFT);
 		pin(diffText);
 		add(diffText);
@@ -201,7 +242,7 @@ class FreeplayState extends MusicBeatState
 		pin(scoreText);
 		add(scoreText);
 
-		composerText = new FlxText(scoreBG.x + 54, 38, 0, "", 24);
+		composerText = new FlxText(panelTextX, 38, 0, "", 24);
 		composerText.setFormat(fontPath, 24, FlxColor.WHITE, LEFT);
 		pin(composerText);
 		add(composerText);
@@ -272,9 +313,11 @@ class FreeplayState extends MusicBeatState
 		addTouchPad('LEFT_FULL', 'A_B_C_X_Y_Z');
 	}
 
-	public function addSong(songName:String, weekNum:Int, songCharacter:String, color:Int)
+	public function addSong(songName:String, weekNum:Int, songCharacter:String, color:Int, composer:String = '')
 	{
-		songs.push(new SongMetadata(songName, weekNum, songCharacter, color));
+		var meta:SongMetadata = new SongMetadata(songName, weekNum, songCharacter, color);
+		meta.composer = composer;
+		songs.push(meta);
 	}
 
 	function weekIsLocked(name:String):Bool
@@ -636,49 +679,60 @@ class FreeplayState extends MusicBeatState
 
 	private function positionHighscore()
 	{
-		diffText.x = scoreBG.x + 54;
+		diffText.x = panelTextX;
 		scoreText.x = W - scoreText.width - 20;
-		composerText.x = scoreBG.x + 54;
+		composerText.x = panelTextX;
 	}
 
-	// Arte de la derecha: assets/images/freeplay/art/<cancion>.png (o default.png)
+	// Arte de la derecha: assets/images/freeplay/art/<cancion>.png
+	// (o <icono>.png, con el nombre del icono de la canción). Si no existe, no se muestra nada.
 	function updateArt():Void
 	{
-		var name:String = Paths.formatToSongPath(songs[curSelected].songName);
-		if (name == artName) return;
-		artName = name;
+		var songKey:String = 'freeplay/art/' + Paths.formatToSongPath(songs[curSelected].songName);
+		var charKey:String = 'freeplay/art/' + songs[curSelected].songCharacter;
 
-		var key:String = 'freeplay/art/' + name;
-		if (!Paths.fileExists('images/' + key + '.png', AssetType.IMAGE))
-			key = 'freeplay/art/default';
+		var key:String = null;
+		if (Paths.fileExists('images/' + songKey + '.png', AssetType.IMAGE))
+			key = songKey;
+		else if (Paths.fileExists('images/' + charKey + '.png', AssetType.IMAGE))
+			key = charKey;
 
-		if (Paths.fileExists('images/' + key + '.png', AssetType.IMAGE))
+		if (key == null)
 		{
-			artSprite.loadGraphic(Paths.image(key));
-			var sc:Float = (FlxG.height * 1.05) / artSprite.frameHeight;
-			artSprite.scale.set(sc, sc);
-			artSprite.updateHitbox();
-			artSprite.x = W - artSprite.width;
-			artSprite.y = FlxG.height - artSprite.height;
-			artSprite.visible = true;
-			artSprite.alpha = 0;
+			artName = '';
 			FlxTween.cancelTweensOf(artSprite);
-			FlxTween.tween(artSprite, {alpha: 1}, 0.25);
-		}
-		else
 			artSprite.visible = false;
+			return;
+		}
+		if (key == artName && artSprite.visible) return;
+		artName = key;
+
+		artSprite.loadGraphic(Paths.image(key));
+		var sc:Float = (FlxG.height * 1.05) / artSprite.frameHeight;
+		artSprite.scale.set(sc, sc);
+		artSprite.updateHitbox();
+		artSprite.x = W - artSprite.width;
+		artSprite.y = FlxG.height - artSprite.height;
+		artSprite.visible = true;
+		artSprite.alpha = 0;
+		FlxTween.cancelTweensOf(artSprite);
+		FlxTween.tween(artSprite, {alpha: 1}, 0.25);
 	}
 
-	// Compositor: assets/data/<cancion>/composer.txt (primera línea)
+	// Compositor: 4.º valor de la canción en el JSON de la week, o assets/data/<cancion>/composer.txt
 	function updateComposer():Void
 	{
-		var composer:String = '???';
-		var file:String = 'data/' + Paths.formatToSongPath(songs[curSelected].songName) + '/composer.txt';
-		if (Paths.fileExists(file, AssetType.TEXT))
+		var composer:String = songs[curSelected].composer;
+		if (composer == null || composer.trim().length < 1)
 		{
-			var content:String = Paths.getTextFromFile(file);
-			if (content != null && content.trim().length > 0)
-				composer = content.trim().split('\n')[0].trim();
+			composer = '???';
+			var file:String = 'data/' + Paths.formatToSongPath(songs[curSelected].songName) + '/composer.txt';
+			if (Paths.fileExists(file, AssetType.TEXT))
+			{
+				var content:String = Paths.getTextFromFile(file);
+				if (content != null && content.trim().length > 0)
+					composer = content.trim().split('\n')[0].trim();
+			}
 		}
 		composerText.text = Language.getPhrase('freeplay_composer', 'Composer:') + ' ' + composer;
 	}
@@ -700,16 +754,26 @@ class FreeplayState extends MusicBeatState
 		for (i in min...max)
 		{
 			var d:Float = i - lerpSelected;
-
-			var item:FlxText = songTexts[i];
-			item.visible = item.active = true;
-			item.x = 150 - 8 * d * d; // curva: los extremos se corren a la izquierda
-			item.y = 330 + d * 98 - item.height / 2;
+			var cy:Float = 330 + d * 98;
+			var baseX:Float = 150 - 8 * d * d; // curva: los extremos se corren a la izquierda
 
 			var icon:HealthIcon = iconArray[i];
+			var item:FlxText = songTexts[i];
+
+			// El texto se achica si no cabe antes del borde diagonal
+			var edge:Float = edgeTop + (edgeBottom - edgeTop) * (cy / FlxG.height);
+			var avail:Float = edge - baseX - icon.width - 24;
+			var sc:Float = Math.max(0.45, Math.min(1, avail / songTextW[i]));
+			item.scale.set(sc, sc);
+			item.updateHitbox();
+
+			item.visible = item.active = true;
+			item.x = baseX;
+			item.y = cy - item.height / 2;
+
 			icon.visible = icon.active = true;
 			icon.x = item.x + item.width + 12;
-			icon.y = item.y + item.height / 2 - icon.height / 2;
+			icon.y = cy - icon.height / 2;
 
 			_lastVisibles.push(i);
 		}
@@ -733,6 +797,7 @@ class SongMetadata
 	public var color:Int = -7179779;
 	public var folder:String = "";
 	public var lastDifficulty:String = null;
+	public var composer:String = "";
 
 	public function new(song:String, week:Int, songCharacter:String, color:Int)
 	{
