@@ -16,7 +16,7 @@ import flixel.math.FlxPoint;
 import flixel.util.FlxDestroyUtil;
 import flixel.util.FlxSpriteUtil;
 
-import lime.utils.AssetType;
+import openfl.utils.AssetType;
 import mobile.backend.MobileScaleMode;
 
 import openfl.utils.Assets;
