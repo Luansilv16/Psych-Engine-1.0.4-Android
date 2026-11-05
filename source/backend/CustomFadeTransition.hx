@@ -2,12 +2,15 @@ package backend;
 
 import flixel.util.FlxGradient;
 import flixel.FlxSubState;
+import flixel.FlxCamera;
+import mobile.backend.MobileScaleMode;
 
 class CustomFadeTransition extends FlxSubState {
 	public static var finishCallback:Void->Void;
 	var isTransIn:Bool = false;
 	var transBlack:FlxSprite;
 	var transGradient:FlxSprite;
+	var transCam:FlxCamera;
 
 	var duration:Float;
 	public function new(duration:Float, isTransIn:Bool)
@@ -19,21 +22,25 @@ class CustomFadeTransition extends FlxSubState {
 
 	override function create()
 	{
-		cameras = [FlxG.cameras.list[FlxG.cameras.list.length-1]];
-		var width:Int = Std.int(FlxG.width / Math.max(camera.zoom, 0.001));
-		var height:Int = Std.int(FlxG.height / Math.max(camera.zoom, 0.001));
+		// Cámara propia, tan ancha como toda la pantalla (así la transición no deja bordes)
+		var width:Int = FlxG.width + Std.int(MobileScaleMode.gameCutoutSize.x) * 2;
+		var height:Int = FlxG.height;
+		transCam = new FlxCamera(0, 0, width, height);
+		transCam.bgColor = FlxColor.TRANSPARENT;
+		FlxG.cameras.add(transCam, false);
+		cameras = [transCam];
 		transGradient = FlxGradient.createGradientFlxSprite(1, height, (isTransIn ? [0x0, FlxColor.BLACK] : [FlxColor.BLACK, 0x0]));
 		transGradient.scale.x = width;
 		transGradient.updateHitbox();
 		transGradient.scrollFactor.set();
-		transGradient.screenCenter(X);
+		transGradient.x = 0;
 		add(transGradient);
 
 		transBlack = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
 		transBlack.scale.set(width, height + 400);
 		transBlack.updateHitbox();
 		transBlack.scrollFactor.set();
-		transBlack.screenCenter(X);
+		transBlack.x = 0;
 		add(transBlack);
 
 		if(isTransIn)
@@ -75,5 +82,9 @@ class CustomFadeTransition extends FlxSubState {
 			finishCallback();
 			finishCallback = null;
 		}
+
+		if (transCam != null && FlxG.cameras.list.contains(transCam))
+			FlxG.cameras.remove(transCam, true);
+		transCam = null;
 	}
 }
