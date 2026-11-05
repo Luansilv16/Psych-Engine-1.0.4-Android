@@ -121,30 +121,46 @@ class MobileScaleMode extends BaseScaleMode
 
 		for (cam in FlxG.cameras.list)
 			fitCamera(cam);
+
+		lastCut = Std.int(gameCutoutSize.x);
 	}
 
+	static var lastCut:Int = 0;
+
 	/**
-	 * Agranda la cámara a los lados y corre su scroll para que el contenido
-	 * 1280x720 quede centrado. Solo toca cámaras de ancho completo.
-	 * (Objetos con scrollFactor 0 no se mueven con el scroll: hay que
-	 *  sumarles gameCutoutSize.x a mano, como en MainMenuState.)
+	 * - Cámara principal (la primera): se agranda a los lados y su scroll se corre
+	 *   para que el contenido 1280x720 quede centrado.
+	 * - Cámaras secundarias (HUD, controles, etc.): NO se agrandan; se mueven hacia
+	 *   el centro (cam.x = borde extra). Así notas, flechas y botones quedan siempre
+	 *   alineados entre sí, sin importar su scrollFactor.
 	 */
 	static function fitCamera(cam:FlxCamera):Void
 	{
 		if (cam == null)
 			return;
 
-		var extra:Int = cam.width - FlxG.width;
-		if (extra < 0 || extra % 2 != 0)
-			return; // cámara con tamaño propio, no se toca
-
-		var oldCut:Int = Std.int(extra / 2);
 		var newCut:Int = Std.int(gameCutoutSize.x);
-		if (oldCut == newCut)
-			return;
 
-		cam.width = FlxG.width + newCut * 2;
-		cam.scroll.x -= (newCut - oldCut);
+		if (FlxG.cameras.list.indexOf(cam) == 0)
+		{
+			var extra:Int = cam.width - FlxG.width;
+			if (extra < 0 || extra % 2 != 0)
+				return; // cámara con tamaño propio, no se toca
+
+			var oldCut:Int = Std.int(extra / 2);
+			if (oldCut == newCut)
+				return;
+
+			cam.width = FlxG.width + newCut * 2;
+			cam.scroll.x -= (newCut - oldCut);
+		}
+		else
+		{
+			if (cam.width != FlxG.width)
+				return; // cámara con tamaño propio, no se toca
+			if (cam.x == 0 || Std.int(cam.x) == lastCut)
+				cam.x = newCut;
+		}
 	}
 
 	@:noCompletion
