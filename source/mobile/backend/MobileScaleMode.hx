@@ -23,6 +23,7 @@
 package mobile.backend;
 
 import flixel.FlxCamera;
+import flixel.FlxSprite;
 import flixel.math.FlxPoint;
 import flixel.system.scaleModes.BaseScaleMode;
 import openfl.events.Event;
@@ -73,11 +74,46 @@ class MobileScaleMode extends BaseScaleMode
 			FlxG.cameras.cameraAdded.add(fitCamera);
 			// Si el jugador cambia la opción, se re-mide la pantalla al momento.
 			FlxG.signals.postUpdate.add(checkPref);
+			// Los fondos de pantalla completa de los menús se ensanchan solos.
+			FlxG.signals.postStateSwitch.add(fitBackgrounds);
 		}
 	}
 
 	static inline function isWide():Bool
 		return ClientPrefs.data != null && ClientPrefs.data.wideScreen && allowWideScreen;
+
+	/**
+	 * Después de crear cada pantalla (menos PlayState), ensancha los sprites que ocupan
+	 * toda la pantalla de 1280x720 (fondos, capas negras) para que cubran el ancho real.
+	 */
+	static function fitBackgrounds():Void
+	{
+		if (!isWide() || gameCutoutSize.x <= 0 || FlxG.state == null)
+			return;
+		if (Std.isOfType(FlxG.state, states.PlayState))
+			return;
+
+		var wideW:Float = FlxG.width + gameCutoutSize.x * 2;
+		for (m in FlxG.state.members)
+		{
+			if (m == null || !Std.isOfType(m, FlxSprite))
+				continue;
+
+			var spr:FlxSprite = cast m;
+			if (spr.camera != FlxG.camera)
+				continue;
+			if (spr.width < FlxG.width * 0.98 || spr.height < FlxG.height * 0.9 || spr.width >= wideW)
+				continue; // no es un fondo de pantalla completa, o ya es lo bastante ancho
+
+			var oldCenterY:Float = spr.y + spr.height / 2;
+			var k:Float = wideW / spr.width;
+			spr.scale.set(spr.scale.x * k, spr.scale.y * k);
+			spr.updateHitbox();
+			// scrollFactor 0 = coordenadas de pantalla; scrollFactor 1 = coordenadas del mundo (ya centrado)
+			spr.x = (spr.scrollFactor.x == 0) ? (wideW - spr.width) / 2 : (FlxG.width - spr.width) / 2;
+			spr.y = oldCenterY - spr.height / 2;
+		}
+	}
 
 	static function checkPref():Void
 	{
