@@ -185,8 +185,8 @@ class FreeplayState extends MusicBeatState
 		// ---------- Canciones + iconos ----------
 		for (i in 0...songs.length)
 		{
-			var songText:FlxText = new FlxText(0, 0, 0, songs[i].songName, 40);
-			songText.setFormat(fontPath, 40, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			var songText:FlxText = new FlxText(0, 0, 0, songs[i].songName, 44); // ↑ tamaño base aumentado
+			songText.setFormat(fontPath, 44, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			songText.borderSize = 2;
 			songText.antialiasing = ClientPrefs.data.antialiasing;
 			songText.visible = songText.active = false;
@@ -291,7 +291,7 @@ class FreeplayState extends MusicBeatState
 		changeSelection();
 		updateTexts();
 
-		addTouchPad('LEFT_FULL', 'A_B_C_X_Y_Z');
+		addTouchPad('LEFT_FULL', 'A_B_X_Y'); // ← sin C ni Z
 		super.create();
 	}
 
@@ -310,7 +310,7 @@ class FreeplayState extends MusicBeatState
 		persistentUpdate = true;
 		super.closeSubState();
 		removeTouchPad();
-		addTouchPad('LEFT_FULL', 'A_B_C_X_Y_Z');
+		addTouchPad('LEFT_FULL', 'A_B_X_Y'); // ← sin C ni Z
 	}
 
 	public function addSong(songName:String, weekNum:Int, songCharacter:String, color:Int, composer:String = '')
@@ -434,13 +434,9 @@ class FreeplayState extends MusicBeatState
 			}
 		}
 
-		if((FlxG.keys.justPressed.CONTROL || touchPad.buttonC.justPressed) && !player.playingMusic)
-		{
-			persistentUpdate = false;
-			openSubState(new GameplayChangersSubstate());
-			removeTouchPad();
-		}
-		else if(FlxG.keys.justPressed.SPACE || touchPad.buttonX.justPressed)
+		// Se quitó la detección de C / CONTROL para abrir Gameplay Changers
+		// Ahora solo se puede abrir con el botón correspondiente si lo agregas manualmente
+		if(FlxG.keys.justPressed.SPACE || touchPad.buttonX.justPressed)
 		{
 			if(instPlaying != curSelected && !player.playingMusic)
 			{
@@ -760,10 +756,10 @@ class FreeplayState extends MusicBeatState
 			var icon:HealthIcon = iconArray[i];
 			var item:FlxText = songTexts[i];
 
-			// El texto se achica si no cabe antes del borde diagonal
+			// El texto se achica solo un poco si no cabe antes del borde diagonal
 			var edge:Float = edgeTop + (edgeBottom - edgeTop) * (cy / FlxG.height);
-			var avail:Float = edge - baseX - icon.width - 24;
-			var sc:Float = Math.max(0.45, Math.min(1, avail / songTextW[i]));
+			var avail:Float = edge - baseX - icon.width - 20;
+			var sc:Float = Math.max(0.70, Math.min(1, avail / songTextW[i])); // mínimo 0.70 (antes era 0.45)
 			item.scale.set(sc, sc);
 			item.updateHitbox();
 
