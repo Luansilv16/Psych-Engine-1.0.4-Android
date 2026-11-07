@@ -38,9 +38,7 @@ class MobileOptionsSubState extends BaseOptionsMenu
 		title = 'Mobile Options';
 		rpcTitle = 'Mobile Options Menu'; // for Discord Rich Presence, fuck it
 
-		option = new Option('Extra Controls', 'Select how many extra buttons you prefer to have?\nThey can be used for mechanics with LUA or HScript.',
-			'extraButtons', STRING, exControlTypes);
-		addOption(option);
+		// Se eliminó la opción "Extra Controls" para forzar solo las 4 hitboxes
 
 		option = new Option('Mobile Controls Opacity',
 			'Selects the opacity for the mobile buttons (careful not to put it at 0 and lose track of your buttons).', 'controlsAlpha', PERCENT);
