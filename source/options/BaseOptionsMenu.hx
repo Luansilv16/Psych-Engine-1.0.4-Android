@@ -99,14 +99,15 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				grpTexts.add(valueText);
 				optionsArray[i].child = valueText;
 			}
-			//optionText.snapToPosition(); //Don't ignore me when i ask for not making a fucking pull request to uncomment this line ok
+			//optionText.snapToPosition();
 			updateTextFrom(optionsArray[i]);
 		}
 
 		changeSelection();
 		reloadCheckboxes();
 		
-		addTouchPad('LEFT_FULL', 'A_B_C');
+		// Solo A y B (sin C)
+		addTouchPad('LEFT_FULL', 'A_B');
 	}
 
 	public function addOption(option:Option) {
@@ -176,7 +177,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 						add(bindingText);
 
 						final escape:String = (controls.mobileC) ? "B" : "ESC";
-						final backspace:String = (controls.mobileC) ? "C" : "Backspace";
+						final backspace:String = (controls.mobileC) ? "B" : "Backspace"; // ya no usamos C
 						
 						bindingText2 = new Alphabet(FlxG.width / 2, 340, Language.getPhrase('controls_rebinding2', 'Hold {1} to Cancel\nHold {2} to Delete', [escape, backspace]), true);
 						bindingText2.alignment = CENTERED;
@@ -219,7 +220,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 										}
 		
 									case STRING:
-										var num:Int = curOption.curOption; //lol
+										var num:Int = curOption.curOption;
 										if(controls.UI_LEFT_P) --num;
 										else num++;
 		
@@ -230,7 +231,6 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		
 										curOption.curOption = num;
 										curOption.setValue(curOption.options[num]);
-										//trace(curOption.options[num]);
 
 									default:
 								}
@@ -269,7 +269,8 @@ class BaseOptionsMenu extends MusicBeatSubstate
 					}
 			}
 
-			if(controls.RESET || touchPad.buttonC.justPressed)
+			// Se quitó touchPad.buttonC.justPressed — solo se resetea con RESET
+			if(controls.RESET)
 			{
 				var leOption:Option = optionsArray[curSelected];
 				if(leOption.type != KEYBIND)
@@ -308,7 +309,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				closeBinding();
 			}
 		}
-		else if (touchPad.buttonC.pressed || FlxG.keys.pressed.BACKSPACE || FlxG.gamepads.anyPressed(BACK))
+		else if (FlxG.keys.pressed.BACKSPACE || FlxG.gamepads.anyPressed(BACK))
 		{
 			holdingEsc += elapsed;
 			if(holdingEsc > 0.5)
@@ -348,9 +349,9 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				var keyPressed:FlxGamepadInputID = NONE;
 				var keyReleased:FlxGamepadInputID = NONE;
 				if(FlxG.gamepads.anyJustPressed(LEFT_TRIGGER))
-					keyPressed = LEFT_TRIGGER; //it wasnt working for some reason
+					keyPressed = LEFT_TRIGGER;
 				else if(FlxG.gamepads.anyJustPressed(RIGHT_TRIGGER))
-					keyPressed = RIGHT_TRIGGER; //it wasnt working for some reason
+					keyPressed = RIGHT_TRIGGER;
 				else
 				{
 					for (i in 0...FlxG.gamepads.numActiveGamepads)
@@ -441,7 +442,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		{
 			switch(alpha.text)
 			{
-				case '[', ']': //Square and Triangle respectively
+				case '[', ']':
 					letter.image = 'alphabet_playstation';
 					letter.updateHitbox();
 					
@@ -503,11 +504,11 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		descBox.setGraphicSize(Std.int(descText.width + 20), Std.int(descText.height + 25));
 		descBox.updateHitbox();
 
-		curOption = optionsArray[curSelected]; //shorter lol
+		curOption = optionsArray[curSelected];
 		FlxG.sound.play(Paths.sound('scrollMenu'));
 	}
 
 	function reloadCheckboxes()
 		for (checkbox in checkboxGroup)
-			checkbox.daValue = Std.string(optionsArray[checkbox.ID].getValue()) == 'true'; //Do not take off the Std.string() from this, it will break a thing in Mod Settings Menu
+			checkbox.daValue = Std.string(optionsArray[checkbox.ID].getValue()) == 'true';
 }
