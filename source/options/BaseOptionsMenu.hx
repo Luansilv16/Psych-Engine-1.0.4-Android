@@ -42,6 +42,11 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		
 		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		bg.color = 0xFFea71fd;
+		// El fondo cubre todo el ancho de la pantalla (pantalla ancha)
+		var wideW:Float = FlxG.width + mobile.backend.MobileScaleMode.gameCutoutSize.x * 2;
+		var bgScale:Float = Math.max(wideW / bg.width, FlxG.height / bg.height);
+		bg.setGraphicSize(Std.int(bg.width * bgScale));
+		bg.updateHitbox();
 		bg.screenCenter();
 		bg.antialiasing = ClientPrefs.data.antialiasing;
 		add(bg);
@@ -67,7 +72,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 
 		descText = new FlxText(50, 600, 1180, "", 32);
 		descText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		descText.scrollFactor.set();
+		// (sin scrollFactor 0: así el texto y su caja se mueven juntos en pantalla ancha)
 		descText.borderSize = 2.4;
 		add(descText);
 
@@ -166,8 +171,10 @@ class BaseOptionsMenu extends MusicBeatSubstate
 					if(controls.ACCEPT)
 					{
 						bindingBlack = new FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
-						bindingBlack.scale.set(FlxG.width, FlxG.height);
+						var cutX:Float = mobile.backend.MobileScaleMode.gameCutoutSize.x;
+						bindingBlack.scale.set(FlxG.width + cutX * 2, FlxG.height);
 						bindingBlack.updateHitbox();
+						bindingBlack.x = -cutX;
 						bindingBlack.alpha = 0;
 						FlxTween.tween(bindingBlack, {alpha: 0.6}, 0.35, {ease: FlxEase.linear});
 						add(bindingBlack);
