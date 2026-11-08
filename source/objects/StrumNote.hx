@@ -2,6 +2,7 @@ package objects;
 
 import backend.animation.PsychAnimationController;
 
+import flixel.math.FlxMath;
 import shaders.RGBPalette;
 import shaders.RGBPalette.RGBShaderReference;
 
@@ -25,6 +26,11 @@ class StrumNote extends FlxSprite
 	}
 
 	public var useRGBShader:Bool = true;
+
+	// --- Efecto estilo V-Slice: la flecha "salta" al acertar y se achica un poco al pulsar ---
+	public var vsliceStyle:Bool = true;
+	var popMul:Float = 1;     // multiplicador de escala actual
+	var popTarget:Float = 1;  // hacia dónde vuelve
 	public function new(x:Float, y:Float, leData:Int, player:Int) {
 		animation = new PsychAnimationController(this);
 
@@ -134,6 +140,7 @@ class StrumNote extends FlxSprite
 			}
 		}
 		updateHitbox();
+		popMul = popTarget = 1; // la escala se acaba de reiniciar
 
 		if(lastAnim != null)
 		{
@@ -156,6 +163,17 @@ class StrumNote extends FlxSprite
 				resetAnim = 0;
 			}
 		}
+
+		// Vuelve suavemente a su tamaño normal (se aplica como proporción, así no pisa otros cambios de escala)
+		if(popMul != popTarget)
+		{
+			var newMul:Float = FlxMath.lerp(popTarget, popMul, Math.exp(-elapsed * 22));
+			if(Math.abs(newMul - popTarget) < 0.002) newMul = popTarget;
+			var ratio:Float = newMul / popMul;
+			scale.x *= ratio;
+			scale.y *= ratio;
+			popMul = newMul;
+		}
 		super.update(elapsed);
 	}
 
@@ -167,5 +185,27 @@ class StrumNote extends FlxSprite
 			centerOrigin();
 		}
 		if(useRGBShader) rgbShader.enabled = (animation.curAnim != null && animation.curAnim.name != 'static');
+
+		if(vsliceStyle && !PlayState.isPixelStage)
+		{
+			switch(anim)
+			{
+				case 'confirm':
+					setPop(1.17, 1); // salta y vuelve
+				case 'pressed':
+					setPop(0.93, 0.93); // se achica mientras se mantiene
+				default:
+					popTarget = 1;
+			}
+		}
+	}
+
+	function setPop(from:Float, target:Float):Void
+	{
+		var ratio:Float = from / popMul;
+		scale.x *= ratio;
+		scale.y *= ratio;
+		popMul = from;
+		popTarget = target;
 	}
 }
