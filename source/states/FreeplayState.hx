@@ -67,9 +67,22 @@ class FreeplayState extends MusicBeatState
 	var songTexts:Array<FlxText> = [];
 	var songTextW:Array<Float> = [];
 	var artBG:FlxSprite;
-	var edgeTop:Float = 400;    // x del borde diagonal arriba
-	var edgeBottom:Float = 240; // x del borde diagonal abajo
 	var panelTextX:Float = 0;
+	var composerX:Float = 0;
+	var scoreRight:Float = 0;
+	var checker:FlxSprite;
+	var mic:FlxSprite;
+
+	// Los PNG de assets/shared/images/freeplay/ están a 720 de alto.
+	static inline final DESIGN_H:Float = 720;
+	static inline final TINT_ALPHA:Float = 0.15; // cuánto tiñe el color de la canción al fondo
+	static inline final SEL_Y:Float = 291;       // y del centro de la canción elegida
+	static inline final ROW_STEP:Float = 150;    // separación con las canciones vecinas
+	static inline final ROW_STEP_FAR:Float = 118; // separación entre las más lejanas
+	static inline final ICON_CX:Float = 337;     // x del centro del icono elegido
+	static inline final ICON_CURVE:Float = 14.7; // cuánto se curva la lista
+	static inline final MIC_X:Float = 393;
+	static inline final MIC_Y:Float = 254;
 
 	inline function pin(o:FlxObject):Void
 		o.scrollFactor.set();
@@ -126,15 +139,17 @@ class FreeplayState extends MusicBeatState
 		W = FlxG.width + MobileScaleMode.gameCutoutSize.x * 2;
 		var H:Float = FlxG.height;
 
-		var fontPath:String = Paths.fileExists('fonts/freeplay.ttf', AssetType.FONT) ? Paths.font('freeplay.ttf') : Paths.font('vcr.ttf');
+		var fontPath:String = Paths.font('vcr.ttf');
+		if (Paths.fileExists('fonts/freeplay.otf', AssetType.FONT)) fontPath = Paths.font('freeplay.otf');
+		else if (Paths.fileExists('fonts/freeplay.ttf', AssetType.FONT)) fontPath = Paths.font('freeplay.ttf');
 
-		// Los PNG de diseño miden 2164x1080: se escalan a la altura de la pantalla
-		var imgScale:Float = H / 1080;
+		var imgScale:Float = H / DESIGN_H;
+		var aa:Bool = ClientPrefs.data.antialiasing;
 
-		// ---------- Fondo (assets/images/freeplay/bg.png) ----------
+		// ---------- Fondo (images/freeplay/bg.png) ----------
 		var hasBgPng:Bool = Paths.fileExists('images/freeplay/bg.png', AssetType.IMAGE);
 		artBG = new FlxSprite().loadGraphic(Paths.image(hasBgPng ? 'freeplay/bg' : 'menuDesat'));
-		artBG.antialiasing = ClientPrefs.data.antialiasing;
+		artBG.antialiasing = aa;
 		var bgScale:Float = Math.max(W / artBG.width, H / artBG.height);
 		artBG.setGraphicSize(Std.int(artBG.width * bgScale));
 		artBG.updateHitbox();
@@ -142,29 +157,40 @@ class FreeplayState extends MusicBeatState
 		pin(artBG);
 		add(artBG);
 
-		// Capa con el color de la canción (suave, para que no oscurezca)
+		// Capa con el color de la canción (muy suave)
 		bg = new FlxSprite().makeGraphic(Std.int(W), Std.int(H), FlxColor.WHITE);
-		bg.alpha = 0.45;
+		bg.alpha = TINT_ALPHA;
 		pin(bg);
 		add(bg);
 
+		// ---------- Cuadros (images/freeplay/checker.png, con transparencia) ----------
+		if (Paths.fileExists('images/freeplay/checker.png', AssetType.IMAGE))
+		{
+			checker = new FlxSprite().loadGraphic(Paths.image('freeplay/checker'));
+			checker.antialiasing = aa;
+			var cs:Float = Math.max(W / checker.width, H / checker.height);
+			checker.setGraphicSize(Std.int(checker.width * cs));
+			checker.updateHitbox();
+			checker.setPosition((W - checker.width) / 2, (H - checker.height) / 2);
+			pin(checker);
+			add(checker);
+		}
+
 		// ---------- Arte del personaje (derecha) ----------
 		artSprite = new FlxSprite();
-		artSprite.antialiasing = ClientPrefs.data.antialiasing;
+		artSprite.antialiasing = aa;
 		artSprite.visible = false;
 		pin(artSprite);
 		add(artSprite);
 
-		// ---------- Panel izquierdo (assets/images/freeplay/panel_left.png) ----------
+		// ---------- Panel izquierdo (images/freeplay/panel_left.png) ----------
 		if (Paths.fileExists('images/freeplay/panel_left.png', AssetType.IMAGE))
 		{
 			leftPanel = new FlxSprite().loadGraphic(Paths.image('freeplay/panel_left'));
-			leftPanel.antialiasing = ClientPrefs.data.antialiasing;
+			leftPanel.antialiasing = aa;
 			leftPanel.scale.set(imgScale, imgScale);
 			leftPanel.updateHitbox();
 			leftPanel.setPosition(0, 0);
-			edgeTop = 675 * imgScale;
-			edgeBottom = 410 * imgScale;
 		}
 		else
 		{
@@ -174,11 +200,21 @@ class FreeplayState extends MusicBeatState
 				FlxPoint.get(240, H), FlxPoint.get(0, H)
 			], 0xFF000000);
 			FlxSpriteUtil.drawLine(leftPanel, 400, 0, 240, H, {thickness: 8, color: 0xFF3A1BB5});
-			edgeTop = 400;
-			edgeBottom = 240;
 		}
 		pin(leftPanel);
 		add(leftPanel);
+
+		// ---------- Micrófono (images/freeplay/mic.png), fijo junto a la canción elegida ----------
+		if (Paths.fileExists('images/freeplay/mic.png', AssetType.IMAGE))
+		{
+			mic = new FlxSprite().loadGraphic(Paths.image('freeplay/mic'));
+			mic.antialiasing = aa;
+			mic.scale.set(imgScale, imgScale);
+			mic.updateHitbox();
+			mic.setPosition(MIC_X * imgScale, MIC_Y * imgScale);
+			pin(mic);
+			add(mic);
+		}
 
 		grpSongs = new FlxTypedGroup<Alphabet>(); // se deja vacío por compatibilidad
 
@@ -206,15 +242,17 @@ class FreeplayState extends MusicBeatState
 		}
 		WeekData.setDirectoryFromWeek();
 
-		// ---------- Panel superior derecho (assets/images/freeplay/panel_right.png) ----------
+		// ---------- Cabecera superior derecha (images/freeplay/panel_right.png) ----------
 		if (Paths.fileExists('images/freeplay/panel_right.png', AssetType.IMAGE))
 		{
 			scoreBG = new FlxSprite().loadGraphic(Paths.image('freeplay/panel_right'));
-			scoreBG.antialiasing = ClientPrefs.data.antialiasing;
+			scoreBG.antialiasing = aa;
 			scoreBG.scale.set(imgScale, imgScale);
 			scoreBG.updateHitbox();
 			scoreBG.setPosition(W - scoreBG.width, 0);
-			panelTextX = W - (2164 - 1490) * imgScale;
+			panelTextX = scoreBG.x + 49 * imgScale;
+			composerX = scoreBG.x + 67 * imgScale;
+			scoreRight = W - 70 * imgScale;
 		}
 		else
 		{
@@ -228,22 +266,24 @@ class FreeplayState extends MusicBeatState
 			FlxSpriteUtil.drawLine(scoreBG, 0, 0, 38, panelH, {thickness: 4, color: FlxColor.WHITE});
 			FlxSpriteUtil.drawLine(scoreBG, 38, panelH - 2, panelW, panelH - 2, {thickness: 4, color: FlxColor.WHITE});
 			panelTextX = W - panelW + 54;
+			composerX = panelTextX;
+			scoreRight = W - 20;
 		}
 		pin(scoreBG);
 		add(scoreBG);
 
-		diffText = new FlxText(panelTextX, 6, 0, "", 24);
-		diffText.setFormat(fontPath, 24, FlxColor.WHITE, LEFT);
+		diffText = new FlxText(panelTextX, 9, 0, "", 26);
+		diffText.setFormat(fontPath, 26, FlxColor.WHITE, LEFT);
 		pin(diffText);
 		add(diffText);
 
-		scoreText = new FlxText(0, 6, 0, "", 24);
-		scoreText.setFormat(fontPath, 24, FlxColor.WHITE, RIGHT);
+		scoreText = new FlxText(0, 9, 0, "", 26);
+		scoreText.setFormat(fontPath, 26, FlxColor.WHITE, RIGHT);
 		pin(scoreText);
 		add(scoreText);
 
-		composerText = new FlxText(panelTextX, 38, 0, "", 24);
-		composerText.setFormat(fontPath, 24, FlxColor.WHITE, LEFT);
+		composerText = new FlxText(composerX, 38, 0, "", 26);
+		composerText.setFormat(fontPath, 26, FlxColor.WHITE, LEFT);
 		pin(composerText);
 		add(composerText);
 
@@ -611,7 +651,7 @@ class FreeplayState extends MusicBeatState
 		var displayDiff:String = Difficulty.getString(curDifficulty);
 		var diffLabel:String = Language.getPhrase('freeplay_difficulty', 'Difficulty:');
 		if (Difficulty.list.length > 1)
-			diffText.text = diffLabel + '<' + displayDiff + '>';
+			diffText.text = diffLabel + ' <' + displayDiff + '>';
 		else
 			diffText.text = diffLabel + displayDiff;
 
@@ -676,8 +716,8 @@ class FreeplayState extends MusicBeatState
 	private function positionHighscore()
 	{
 		diffText.x = panelTextX;
-		scoreText.x = W - scoreText.width - 20;
-		composerText.x = panelTextX;
+		scoreText.x = scoreRight - scoreText.width;
+		composerText.x = composerX;
 	}
 
 	// Arte de la derecha: assets/images/freeplay/art/<cancion>.png
@@ -733,7 +773,7 @@ class FreeplayState extends MusicBeatState
 		composerText.text = Language.getPhrase('freeplay_composer', 'Composer:') + ' ' + composer;
 	}
 
-	var _drawDistance:Int = 5;
+	var _drawDistance:Int = 4;
 	var _lastVisibles:Array<Int> = [];
 	public function updateTexts(elapsed:Float = 0.0)
 	{
@@ -745,30 +785,42 @@ class FreeplayState extends MusicBeatState
 		}
 		_lastVisibles = [];
 
+		var s:Float = FlxG.height / DESIGN_H;
 		var min:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected - _drawDistance)));
 		var max:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected + _drawDistance + 1)));
 		for (i in min...max)
 		{
 			var d:Float = i - lerpSelected;
-			var cy:Float = 330 + d * 98;
-			var baseX:Float = 150 - 8 * d * d; // curva: los extremos se corren a la izquierda
+			var ad:Float = Math.abs(d);
+
+			// Altura: las vecinas quedan a ROW_STEP y las lejanas más juntas
+			var cy:Float = (SEL_Y + (d < 0 ? -1 : 1) * (ROW_STEP * Math.min(ad, 1) + ROW_STEP_FAR * Math.max(ad - 1, 0))) * s;
+			// Curva: el icono elegido es el que más sobresale a la derecha
+			var iconCX:Float = (ICON_CX - ICON_CURVE * d * d) * s;
+			// Las canciones lejanas se van apagando
+			var fade:Float = Math.max(0.25, Math.min(1, 1.15 - 0.3 * ad));
 
 			var icon:HealthIcon = iconArray[i];
 			var item:FlxText = songTexts[i];
 
-			// El texto se achica solo un poco si no cabe antes del borde diagonal
-			var edge:Float = edgeTop + (edgeBottom - edgeTop) * (cy / FlxG.height);
-			var avail:Float = edge - baseX - icon.width - 20;
-			var sc:Float = Math.max(0.70, Math.min(1, avail / songTextW[i])); // mínimo 0.70 (antes era 0.45)
+			var iconSc:Float = (0.55 + 0.08 * Math.max(0, 1 - ad)) * s;
+			icon.scale.set(iconSc, iconSc);
+			icon.updateHitbox();
+			icon.alpha = item.alpha = fade;
+
+			// El texto va pegado a la izquierda del icono y se achica si no cabe
+			var iconLeft:Float = iconCX - icon.width / 2;
+			var avail:Float = iconLeft - 12 * s - 24 * s;
+			var sc:Float = Math.max(0.45, Math.min(1, avail / songTextW[i]));
 			item.scale.set(sc, sc);
 			item.updateHitbox();
 
 			item.visible = item.active = true;
-			item.x = baseX;
+			item.x = iconLeft - 12 * s - item.width;
 			item.y = cy - item.height / 2;
 
 			icon.visible = icon.active = true;
-			icon.x = item.x + item.width + 12;
+			icon.x = iconLeft;
 			icon.y = cy - icon.height / 2;
 
 			_lastVisibles.push(i);
