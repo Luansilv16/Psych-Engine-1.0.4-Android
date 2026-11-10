@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TextureAtlas imagePath="hcrgbp.png">
+<SubTexture name="lop0000" x="0" y="0" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="lop0001" x="36" y="0" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="lop0002" x="72" y="0" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="lop0003" x="108" y="0" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="lop0004" x="0" y="32" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="lop0005" x="36" y="32" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="lop0006" x="72" y="32" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="lop0007" x="108" y="32" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="bai0000" x="0" y="64" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="bai0001" x="36" y="64" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="bai0002" x="72" y="64" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="bai0003" x="108" y="64" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="bai0004" x="0" y="96" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="bai0005" x="36" y="96" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="bai0006" x="72" y="96" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+<SubTexture name="bai0007" x="108" y="96" width="36" height="32" frameX="-56" frameY="-10" frameWidth="200" frameHeight="59" />
+</TextureAtlas>
