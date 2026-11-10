@@ -2,13 +2,19 @@ package backend;
 
 import flixel.FlxSubState;
 import flixel.FlxCamera;
-import flixel.util.FlxSpriteUtil;
 import flixel.math.FlxMath;
 import mobile.backend.MobileScaleMode;
 
 /**
- * Transición futurista NixerEngine
- * Compatible con Wide Screen Mode ON/OFF
+ * Transición futurista NixerEngine (persianas digitales)
+ *
+ * - transOut (isTransIn = false): 14 barras entran desde los lados, en orden mezclado,
+ *   cada una con un borde cian/magenta, hasta tapar toda la pantalla.
+ *   Al final aparece una línea central y el texto NIXERENGINE.
+ * - transIn (isTransIn = true): empieza con todo tapado y las barras se abren
+ *   de la misma forma, descubriendo el nuevo estado sin saltos.
+ *
+ * Compatible con Wide Screen Mode ON/OFF.
  */
 class CustomFadeTransition extends FlxSubState {
 	public static var finishCallback:Void->Void;
@@ -18,18 +24,26 @@ class CustomFadeTransition extends FlxSubState {
 
 	var transCam:FlxCamera;
 	var bars:Array<FlxSprite> = [];
-	var glowLine:FlxSprite;
+	var edges:Array<FlxSprite> = [];
+	var trails:Array<FlxSprite> = [];
+	var delays:Array<Float> = [];
+	var coreLine:FlxSprite;
 	var scanLine:FlxSprite;
-	var overlay:FlxSprite;
+	var label:FlxText;
 
 	var time:Float = 0;
+	var closing:Bool = false;
 	var width:Int = 1280;
 	var height:Int = 720;
 
 	// Colores futuristas
-	static inline var ACCENT:Int = 0xFF00F0FF;   // cyan
+	static inline var ACCENT:Int = 0xFF00F0FF;   // cian
 	static inline var ACCENT2:Int = 0xFFB000FF;  // magenta
 	static inline var DARK:Int = 0xFF050510;
+
+	static inline var BAR_COUNT:Int = 14;
+	static inline var STAGGER:Float = 0.4;  // parte de la duración usada para escalonar las barras
+	static inline var EDGE_W:Int = 4;
 
 	public function new(duration:Float, isTransIn:Bool)
 	{
@@ -49,57 +63,54 @@ class CustomFadeTransition extends FlxSubState {
 		FlxG.cameras.add(transCam, false);
 		cameras = [transCam];
 
-		// Fondo oscuro base
-		overlay = new FlxSprite().makeGraphic(width, height, DARK);
-		overlay.scrollFactor.set();
-		overlay.alpha = isTransIn ? 1 : 0;
-		add(overlay);
+		var barH:Float = height / BAR_COUNT;
+		var barPx:Int = Math.ceil(barH) + 1;
 
-		// Barras horizontales tipo "digital wipe"
-		var barCount:Int = 12;
-		var barH:Float = height / barCount;
-
-		for (i in 0...barCount)
+		for (i in 0...BAR_COUNT)
 		{
-			var bar = new FlxSprite().makeGraphic(width + 40, Std.int(barH) + 2, DARK);
-			bar.scrollFactor.set();
-			bar.y = i * barH;
+			var dir:Int = (i % 2 == 0) ? 1 : -1;
 
-			// Alternar dirección (izquierda / derecha) para look más dinámico
-			if (isTransIn)
-			{
-				bar.x = (i % 2 == 0) ? -width - 60 : width + 60;
-			}
-			else
-			{
-				bar.x = 0;
-			}
-			bar.alpha = 1;
+			var bar:FlxSprite = new FlxSprite(0, Math.floor(i * barH)).makeGraphic(width, barPx, DARK);
+			bar.scrollFactor.set();
+			// Cubrir: arrancan fuera de pantalla. Descubrir: arrancan tapando todo.
+			bar.x = isTransIn ? 0 : -dir * width;
 			bars.push(bar);
 			add(bar);
+
+			var trail:FlxSprite = new FlxSprite(0, bar.y).makeGraphic(EDGE_W, barPx, ACCENT2);
+			trail.scrollFactor.set();
+			trail.alpha = 0.5;
+			trail.visible = false;
+			trails.push(trail);
+			add(trail);
+
+			var edge:FlxSprite = new FlxSprite(0, bar.y).makeGraphic(EDGE_W, barPx, ACCENT);
+			edge.scrollFactor.set();
+			edge.alpha = 0.95;
+			edge.visible = false;
+			edges.push(edge);
+			add(edge);
+
+			// Orden mezclado (5 y 14 son coprimos): no se abren/cierran de arriba a abajo
+			delays.push(((i * 5) % BAR_COUNT) / (BAR_COUNT - 1) * STAGGER);
 		}
 
-		// Línea de glow cyan que recorre la transición
-		glowLine = new FlxSprite().makeGraphic(8, height, ACCENT);
-		glowLine.scrollFactor.set();
-		glowLine.alpha = 0.9;
-		glowLine.x = isTransIn ? -20 : width + 10;
-		add(glowLine);
+		// Línea central + texto (se ven con la pantalla tapada)
+		coreLine = new FlxSprite(0, height / 2 - 1).makeGraphic(width, 3, ACCENT);
+		coreLine.scrollFactor.set();
+		coreLine.scale.x = isTransIn ? 1 : 0;
+		add(coreLine);
 
-		// Segunda línea magenta (detrás, más suave)
-		var glow2 = new FlxSprite().makeGraphic(4, height, ACCENT2);
-		glow2.scrollFactor.set();
-		glow2.alpha = 0.55;
-		glow2.x = glowLine.x - 18;
-		glow2.ID = 99;
-		add(glow2);
-		bars.push(glow2); // reutilizamos array para destruir después
+		label = new FlxText(0, height / 2 - 44, width, "NIXERENGINE", 22);
+		label.setFormat(Paths.font('vcr.ttf'), 22, ACCENT, CENTER);
+		label.scrollFactor.set();
+		label.alpha = isTransIn ? 1 : 0;
+		add(label);
 
-		// Scanline sutil
-		scanLine = new FlxSprite().makeGraphic(width, 2, 0x55FFFFFF);
+		// Scanline que baja durante toda la transición
+		scanLine = new FlxSprite(0, -4).makeGraphic(width, 2, 0xFFFFFFFF);
 		scanLine.scrollFactor.set();
 		scanLine.alpha = 0.25;
-		scanLine.y = -10;
 		add(scanLine);
 
 		super.create();
@@ -111,67 +122,52 @@ class CustomFadeTransition extends FlxSubState {
 		time += elapsed;
 
 		var t:Float = Math.min(1, time / duration); // 0 → 1
+		var span:Float = 1 - STAGGER;
 
-		if (isTransIn)
+		for (i in 0...BAR_COUNT)
 		{
-			// Entrada: las barras entran y el overlay se desvanece
-			var ease = FlxEase.cubeOut(t);
+			var p:Float = FlxMath.bound((t - delays[i]) / span, 0, 1);
+			var dir:Int = (i % 2 == 0) ? 1 : -1;
+			var bar:FlxSprite = bars[i];
+			var edge:FlxSprite = edges[i];
+			var trail:FlxSprite = trails[i];
+			var edgeX:Float;
 
-			for (i in 0...bars.length)
+			if (!isTransIn)
 			{
-				var bar = bars[i];
-				if (bar.ID == 99) // glow2
-				{
-					bar.x = FlxMath.lerp(width + 40, -30, ease) - 18;
-					continue;
-				}
-				if (i >= 12) continue;
-
-				var fromX = (i % 2 == 0) ? -width - 60 : width + 60;
-				var toX = 0.0;
-				// Stagger ligero
-				var localT = FlxMath.bound((t - i * 0.018) / 0.75, 0, 1);
-				var localEase = FlxEase.cubeOut(localT);
-				bar.x = FlxMath.lerp(fromX, toX, localEase);
+				// CUBRIR: la barra entra desde su lado; el borde brillante va delante
+				bar.x = (1 - FlxEase.quartOut(p)) * (-dir * width);
+				edgeX = (dir > 0) ? bar.x + width - EDGE_W : bar.x;
+				trail.x = (dir > 0) ? edgeX - EDGE_W - 5 : edgeX + EDGE_W + 5;
+			}
+			else
+			{
+				// DESCUBRIR: la barra sale; el borde brillante marca el límite de lo descubierto
+				bar.x = FlxEase.quartIn(p) * (dir * width);
+				edgeX = (dir > 0) ? bar.x : bar.x + width - EDGE_W;
+				trail.x = (dir > 0) ? edgeX + EDGE_W + 5 : edgeX - EDGE_W - 5;
 			}
 
-			glowLine.x = FlxMath.lerp(width + 20, -30, ease);
-			overlay.alpha = 1 - ease;
+			edge.x = edgeX;
+			edge.visible = trail.visible = (p > 0 && p < 1);
+		}
 
-			// Scanline baja rápido
-			scanLine.y = FlxMath.lerp(-10, height + 10, FlxEase.quadIn(t));
-			scanLine.alpha = 0.35 * (1 - t);
+		if (!isTransIn)
+		{
+			coreLine.scale.x = FlxEase.quartOut(FlxMath.bound((t - 0.55) / 0.45, 0, 1));
+			label.alpha = FlxMath.bound((t - 0.75) / 0.25, 0, 1);
 		}
 		else
 		{
-			// Salida: las barras salen hacia los lados y el overlay aparece
-			var ease = FlxEase.cubeIn(t);
-
-			for (i in 0...bars.length)
-			{
-				var bar = bars[i];
-				if (bar.ID == 99)
-				{
-					bar.x = FlxMath.lerp(-30, width + 40, ease) - 18;
-					continue;
-				}
-				if (i >= 12) continue;
-
-				var toX = (i % 2 == 0) ? -width - 60 : width + 60;
-				var localT = FlxMath.bound((t - i * 0.015) / 0.8, 0, 1);
-				var localEase = FlxEase.cubeIn(localT);
-				bar.x = FlxMath.lerp(0, toX, localEase);
-			}
-
-			glowLine.x = FlxMath.lerp(-20, width + 30, ease);
-			overlay.alpha = ease;
-
-			scanLine.y = FlxMath.lerp(-10, height + 10, FlxEase.quadOut(t));
-			scanLine.alpha = 0.3 * t;
+			coreLine.scale.x = 1 - FlxEase.quartIn(FlxMath.bound(t / 0.35, 0, 1));
+			label.alpha = 1 - FlxMath.bound(t / 0.25, 0, 1);
 		}
 
-		if (t >= 1)
+		scanLine.y = FlxMath.lerp(-4, height + 4, t);
+
+		if (t >= 1 && !closing)
 		{
+			closing = true;
 			close();
 		}
 	}
