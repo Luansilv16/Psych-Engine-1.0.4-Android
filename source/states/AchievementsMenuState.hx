@@ -11,9 +11,14 @@ import objects.Bar;
 
 #if ACHIEVEMENTS_ALLOWED
 /**
- * Pantalla de logros con el diseño NixerEngine (igual que el Freeplay):
- * lista en curva a la izquierda, icono grande + descripción a la derecha.
- * Fondos: assets/shared/images/freeplay/bg.png, panel_left.png, panel_right.png
+ * Pantalla de logros futurista NixerEngine (misma familia visual que el Freeplay):
+ * lista en curva a la izquierda, icono grande con anillos giratorios a la derecha.
+ *
+ * Animaciones: paneles que se deslizan al entrar, lista que entra escalonada,
+ * barra de selección que pulsa, anillos HUD que giran, rayo de escaneo,
+ * icono que "salta" al cambiar, nombre que aparece y descripción que se escribe sola.
+ *
+ * Assets (a 720 de alto): assets/shared/images/freeplay/bg.png, panel_left.png, panel_right.png
  */
 class AchievementsMenuState extends MusicBeatState
 {
@@ -27,18 +32,42 @@ class AchievementsMenuState extends MusicBeatState
 	public var progressBar:Bar;
 	public var barTween:FlxTween = null;
 
+	// Medidas de diseño (los PNG miden 720 de alto)
+	static inline final DESIGN_H:Float = 720;
+	static inline final EDGE_X:Float = 360;      // x del borde azul del panel izquierdo
+	static inline final SEL_Y:Float = 360;       // y del centro de la fila elegida
+	static inline final ROW_STEP:Float = 92;     // separación entre filas
+	static inline final ICON_CX:Float = 335;     // x del centro del icono de la fila elegida
+	static inline final ICON_CURVE:Float = 12;   // cuánto se curva la lista
+	static inline final ACCENT:Int = 0xFF00F0FF;
+	static inline final ACCENT2:Int = 0xFFB000FF;
+
 	var W:Float = 1280;
-	var edgeTop:Float = 400;
-	var edgeBottom:Float = 240;
 	var fontPath:String;
 	var achTexts:Array<FlxText> = [];
 	var achTextW:Array<Float> = [];
 	var lerpSelected:Float = 0;
-	var tint:FlxSprite;
 	var bigIcon:FlxSprite;
+	var bigBase:Float = 1;
 	var lastBig:FlxGraphic = null;
 	var countText:FlxText;
 	var centerX:Float = 900;
+
+	var artBG:FlxSprite;
+	var bgTween:FlxTween = null;
+	var bgFirst:Bool = true;
+	var leftPanel:FlxSprite;
+	var rightPanel:FlxSprite;
+	var selBar:FlxSprite;
+	var chevron:FlxSprite;
+	var ringA:FlxSprite;
+	var ringB:FlxSprite;
+	var beam:FlxSprite;
+
+	var introProg:Float = 0;
+	var animT:Float = 0;
+	var descFull:String = '';
+	var descShown:Float = 0;
 
 	inline function pin(o:FlxObject):Void
 		o.scrollFactor.set();
@@ -63,63 +92,93 @@ class AchievementsMenuState extends MusicBeatState
 
 		W = FlxG.width + MobileScaleMode.gameCutoutSize.x * 2;
 		var H:Float = FlxG.height;
-		var imgScale:Float = H / 1080; // los PNG de diseño miden 2164x1080
-		fontPath = Paths.fileExists('fonts/freeplay.ttf', AssetType.FONT) ? Paths.font('freeplay.ttf') : Paths.font('vcr.ttf');
+		var imgScale:Float = H / DESIGN_H;
+		var aa:Bool = ClientPrefs.data.antialiasing;
 
-		// ---------- Fondo ----------
-		var artBG:FlxSprite = new FlxSprite().loadGraphic(Paths.image(Paths.fileExists('images/freeplay/bg.png', AssetType.IMAGE) ? 'freeplay/bg' : 'menuBGBlue'));
-		artBG.antialiasing = ClientPrefs.data.antialiasing;
+		fontPath = Paths.font('vcr.ttf');
+		if (Paths.fileExists('fonts/freeplay.otf', AssetType.FONT)) fontPath = Paths.font('freeplay.otf');
+		else if (Paths.fileExists('fonts/freeplay.ttf', AssetType.FONT)) fontPath = Paths.font('freeplay.ttf');
+
+		centerX = (EDGE_X * imgScale + W) / 2;
+
+		// ---------- Fondo (blanco/gris, se pinta directo: dorado = desbloqueado, gris = bloqueado) ----------
+		artBG = new FlxSprite().loadGraphic(Paths.image(Paths.fileExists('images/freeplay/bg.png', AssetType.IMAGE) ? 'freeplay/bg' : 'menuBGBlue'));
+		artBG.antialiasing = aa;
 		var bgScale:Float = Math.max(W / artBG.width, H / artBG.height);
 		artBG.setGraphicSize(Std.int(artBG.width * bgScale));
 		artBG.updateHitbox();
 		artBG.setPosition((W - artBG.width) / 2, (H - artBG.height) / 2);
+		artBG.alpha = 0;
+		FlxTween.tween(artBG, {alpha: 1}, 0.5, {ease: FlxEase.quadOut});
 		pin(artBG);
 		add(artBG);
 
-		// Capa de color: dorado si el logro está desbloqueado, gris si no
-		tint = new FlxSprite().makeGraphic(Std.int(W), Std.int(H), FlxColor.WHITE);
-		tint.alpha = 0.3;
-		tint.color = 0xFF888888;
-		pin(tint);
-		add(tint);
+		// ---------- Anillos HUD giratorios detrás del icono grande ----------
+		var ringSize:Int = 330;
+		ringA = new FlxSprite().makeGraphic(ringSize, ringSize, FlxColor.TRANSPARENT, true);
+		FlxSpriteUtil.drawRect(ringA, 3, 3, ringSize - 6, ringSize - 6, FlxColor.TRANSPARENT, {thickness: 3, color: ACCENT});
+		ringA.antialiasing = true;
+		ringA.setPosition(centerX - ringSize / 2, 230 - ringSize / 2);
+		ringA.alpha = 0;
+		pin(ringA);
+		add(ringA);
+
+		var ringSizeB:Int = 280;
+		ringB = new FlxSprite().makeGraphic(ringSizeB, ringSizeB, FlxColor.TRANSPARENT, true);
+		FlxSpriteUtil.drawRect(ringB, 3, 3, ringSizeB - 6, ringSizeB - 6, FlxColor.TRANSPARENT, {thickness: 2, color: ACCENT2});
+		ringB.antialiasing = true;
+		ringB.setPosition(centerX - ringSizeB / 2, 230 - ringSizeB / 2);
+		ringB.angle = 45;
+		ringB.alpha = 0;
+		pin(ringB);
+		add(ringB);
+
+		// ---------- Rayo de escaneo que baja por la zona derecha ----------
+		beam = new FlxSprite(EDGE_X * imgScale, -4).makeGraphic(Std.int(W - EDGE_X * imgScale), 2, ACCENT);
+		beam.alpha = 0.18;
+		pin(beam);
+		add(beam);
 
 		// ---------- Icono grande (derecha) ----------
 		bigIcon = new FlxSprite();
 		pin(bigIcon);
 		add(bigIcon);
 
-		// ---------- Panel izquierdo ----------
-		var leftPanel:FlxSprite;
+		// ---------- Panel izquierdo (entra deslizándose) ----------
 		if (Paths.fileExists('images/freeplay/panel_left.png', AssetType.IMAGE))
 		{
 			leftPanel = new FlxSprite().loadGraphic(Paths.image('freeplay/panel_left'));
-			leftPanel.antialiasing = ClientPrefs.data.antialiasing;
+			leftPanel.antialiasing = aa;
 			leftPanel.scale.set(imgScale, imgScale);
 			leftPanel.updateHitbox();
-			leftPanel.setPosition(0, 0);
-			edgeTop = 675 * imgScale;
-			edgeBottom = 410 * imgScale;
 		}
 		else
 		{
-			leftPanel = new FlxSprite().makeGraphic(420, Std.int(H), FlxColor.TRANSPARENT, true);
-			FlxSpriteUtil.drawPolygon(leftPanel, [
-				FlxPoint.get(0, 0), FlxPoint.get(400, 0),
-				FlxPoint.get(240, H), FlxPoint.get(0, H)
-			], 0xFF000000);
-			FlxSpriteUtil.drawLine(leftPanel, 400, 0, 240, H, {thickness: 8, color: 0xFF3A1BB5});
+			leftPanel = new FlxSprite().makeGraphic(Std.int(EDGE_X * imgScale), Std.int(H), FlxColor.BLACK);
 		}
+		leftPanel.setPosition(-leftPanel.width, 0);
+		FlxTween.tween(leftPanel, {x: 0}, 0.5, {ease: FlxEase.quartOut});
 		pin(leftPanel);
 		add(leftPanel);
 
-		centerX = ((edgeTop + edgeBottom) / 2 + W) / 2;
+		// ---------- Barra de selección + flecha (pulsan en update) ----------
+		selBar = new FlxSprite(0, SEL_Y * imgScale - 30).makeGraphic(Std.int(EDGE_X * imgScale + 30), 60, ACCENT);
+		selBar.alpha = 0.15;
+		pin(selBar);
+		add(selBar);
+
+		chevron = new FlxSprite().makeGraphic(14, 26, FlxColor.TRANSPARENT, true);
+		FlxSpriteUtil.drawPolygon(chevron, [FlxPoint.get(0, 0), FlxPoint.get(14, 13), FlxPoint.get(0, 26)], ACCENT);
+		chevron.setPosition(10, SEL_Y * imgScale - 13);
+		pin(chevron);
+		add(chevron);
 
 		// ---------- Lista: texto + icono pequeño ----------
 		grpOptions = new FlxSpriteGroup();
 		grpOptions.scrollFactor.set();
 		for (num => option in options)
 		{
-			var hasAntialias:Bool = ClientPrefs.data.antialiasing;
+			var hasAntialias:Bool = aa;
 			var graphic = null;
 			if(option.unlocked)
 			{
@@ -148,7 +207,7 @@ class AchievementsMenuState extends MusicBeatState
 			var t:FlxText = new FlxText(0, 0, 0, option.displayName, 32);
 			t.setFormat(fontPath, 32, option.unlocked ? FlxColor.WHITE : 0xFFBBBBBB, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			t.borderSize = 2;
-			t.antialiasing = ClientPrefs.data.antialiasing;
+			t.antialiasing = aa;
 			t.visible = false;
 			pin(t);
 			achTextW.push(t.width);
@@ -158,17 +217,16 @@ class AchievementsMenuState extends MusicBeatState
 		#if MODS_ALLOWED Mods.loadTopMod(); #end
 		add(grpOptions);
 
-		// ---------- Panel superior derecho: cuántos logros llevas ----------
-		var rightPanel:FlxSprite;
+		// ---------- Cabecera superior derecha (entra desde arriba) ----------
 		var panelTextX:Float;
 		if (Paths.fileExists('images/freeplay/panel_right.png', AssetType.IMAGE))
 		{
 			rightPanel = new FlxSprite().loadGraphic(Paths.image('freeplay/panel_right'));
-			rightPanel.antialiasing = ClientPrefs.data.antialiasing;
+			rightPanel.antialiasing = aa;
 			rightPanel.scale.set(imgScale, imgScale);
 			rightPanel.updateHitbox();
 			rightPanel.setPosition(W - rightPanel.width, 0);
-			panelTextX = W - (2164 - 1490) * imgScale;
+			panelTextX = rightPanel.x + 49 * imgScale;
 		}
 		else
 		{
@@ -180,10 +238,16 @@ class AchievementsMenuState extends MusicBeatState
 
 		var unlockedCount:Int = 0;
 		for (o in options) if (o.unlocked) unlockedCount++;
-		countText = new FlxText(panelTextX, 20, 0, Language.getPhrase('achievements_unlocked', 'Achievements: {1} / {2}', [unlockedCount, options.length]), 26);
+		var countY:Float = 24;
+		countText = new FlxText(panelTextX, countY - rightPanel.height, 0, Language.getPhrase('achievements_unlocked', 'Achievements: {1} / {2}', [unlockedCount, options.length]), 26);
 		countText.setFormat(fontPath, 26, FlxColor.WHITE, LEFT);
 		pin(countText);
 		add(countText);
+
+		var hdrY:Float = rightPanel.y;
+		rightPanel.y = hdrY - rightPanel.height;
+		FlxTween.tween(rightPanel, {y: hdrY}, 0.45, {startDelay: 0.15, ease: FlxEase.quartOut});
+		FlxTween.tween(countText, {y: countY}, 0.45, {startDelay: 0.15, ease: FlxEase.quartOut});
 
 		// ---------- Nombre, descripción y progreso (derecha) ----------
 		nameText = new FlxText(centerX - 300, 400, 600, "", 34);
@@ -281,6 +345,26 @@ class AchievementsMenuState extends MusicBeatState
 				refreshBigIcon();
 		}
 
+		// ---------- Animaciones ambientales ----------
+		animT += elapsed;
+		ringA.angle += elapsed * 22;
+		ringB.angle -= elapsed * 38;
+		var rv:Float = FlxMath.bound((introProg - 0.35) / 0.65, 0, 1);
+		ringA.alpha = 0.55 * rv;
+		ringB.alpha = 0.4 * rv;
+		beam.y += elapsed * 150;
+		if (beam.y > FlxG.height) beam.y = -4;
+		selBar.alpha = (0.13 + 0.06 * Math.sin(animT * 4)) * rv;
+		chevron.x = 10 + 4 * Math.sin(animT * 6);
+		chevron.alpha = rv;
+
+		// Descripción que se escribe sola
+		if (descShown < descFull.length)
+		{
+			descShown += elapsed * 90;
+			descText.text = descFull.substr(0, Std.int(Math.min(descShown, descFull.length)));
+		}
+
 		if (controls.BACK) {
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			MusicBeatState.switchState(new MainMenuState());
@@ -289,30 +373,42 @@ class AchievementsMenuState extends MusicBeatState
 		super.update(elapsed);
 	}
 
-	// Lista en curva sobre el panel izquierdo; el texto se achica si no cabe antes del borde
+	// Lista en curva sobre el panel izquierdo: texto pegado a la izquierda del icono, que
+	// queda sobre el borde azul. Las filas lejanas se apagan; al entrar llegan escalonadas.
 	function updateTexts(elapsed:Float):Void
 	{
 		lerpSelected = FlxMath.lerp(curSelected, lerpSelected, Math.exp(-elapsed * 9.6));
+		introProg = Math.min(1, introProg + elapsed / 1.0);
+
+		var s:Float = FlxG.height / DESIGN_H;
 		for (i in 0...options.length)
 		{
 			var d:Float = i - lerpSelected;
+			var ad:Float = Math.abs(d);
 			var item:FlxText = achTexts[i];
 			var icon:FlxSprite = grpOptions.members[i];
-			item.visible = icon.visible = Math.abs(d) < 5.5;
+			item.visible = icon.visible = ad < 5.5;
 			if (!item.visible) continue;
 
-			var cy:Float = FlxG.height / 2 + d * 84;
-			var baseX:Float = Math.max(24, 110 - 6 * d * d);
-			var edge:Float = edgeTop + (edgeBottom - edgeTop) * (cy / FlxG.height);
-			var avail:Float = edge - baseX - icon.width - 30;
-			var sc:Float = Math.max(0.5, Math.min(1, avail / achTextW[i]));
+			var cy:Float = (SEL_Y + d * ROW_STEP) * s;
+			var iconCX:Float = (ICON_CX - ICON_CURVE * d * d) * s;
+			var fade:Float = Math.max(0.2, Math.min(1, 1.15 - 0.28 * ad));
+
+			// Entrada: cada fila llega desde la izquierda con retraso según su distancia
+			var ie:Float = FlxEase.quartOut(FlxMath.bound(introProg * 1.8 - ad * 0.15, 0, 1));
+			var slide:Float = -(1 - ie) * 260 * s;
+
+			var iconLeft:Float = iconCX - icon.width / 2;
+			var avail:Float = iconLeft - 12 * s - 24 * s;
+			var sc:Float = Math.max(0.4, Math.min(1, avail / achTextW[i]));
 			item.scale.set(sc, sc);
 			item.updateHitbox();
-			item.x = baseX;
-			item.y = cy - item.height / 2;
 
-			icon.x = item.x + item.width + 10;
+			item.x = iconLeft - 12 * s - item.width + slide;
+			item.y = cy - item.height / 2;
+			icon.x = iconLeft + slide;
 			icon.y = cy - icon.height / 2;
+			item.alpha = icon.alpha = fade * ie;
 		}
 	}
 
@@ -322,12 +418,25 @@ class AchievementsMenuState extends MusicBeatState
 		lastBig = spr.graphic;
 		bigIcon.loadGraphic(spr.graphic);
 		bigIcon.antialiasing = spr.antialiasing;
-		var sc:Float = 280 / bigIcon.frameHeight;
-		bigIcon.scale.set(sc, sc);
-		bigIcon.updateHitbox();
-		bigIcon.setPosition(centerX - bigIcon.width / 2, 230 - bigIcon.height / 2);
+
+		// El icono escala desde su centro (sin updateHitbox) y "salta" al cambiar
+		bigBase = 280 / bigIcon.frameHeight;
+		bigIcon.setPosition(centerX - bigIcon.frameWidth / 2, 230 - bigIcon.frameHeight / 2);
+		FlxTween.cancelTweensOf(bigIcon.scale);
+		bigIcon.scale.set(bigBase * 0.6, bigBase * 0.6);
+		FlxTween.tween(bigIcon.scale, {x: bigBase, y: bigBase}, 0.35, {ease: FlxEase.backOut});
+
 		nameText.text = options[curSelected].displayName;
-		tint.color = options[curSelected].unlocked ? 0xFFF9CF51 : 0xFF888888;
+
+		// Fondo: dorado si está desbloqueado, gris si no
+		var target:Int = options[curSelected].unlocked ? 0xFFF9CF51 : 0xFF888888;
+		if (bgTween != null) bgTween.cancel();
+		if (bgFirst)
+		{
+			artBG.color = target;
+			bgFirst = false;
+		}
+		else bgTween = FlxTween.color(artBG, 0.4, artBG.color, target);
 	}
 
 	function _changeSelection(playSound:Bool = true)
@@ -335,7 +444,18 @@ class AchievementsMenuState extends MusicBeatState
 		if(playSound) FlxG.sound.play(Paths.sound('scrollMenu'));
 		var hasProgress = options[curSelected].maxProgress > 0;
 		nameText.text = options[curSelected].displayName;
-		descText.text = options[curSelected].description;
+
+		// Nombre que sube un poco mientras aparece
+		FlxTween.cancelTweensOf(nameText);
+		nameText.alpha = 0;
+		nameText.y = 412;
+		FlxTween.tween(nameText, {alpha: 1, y: 400}, 0.25, {ease: FlxEase.quartOut});
+
+		// Descripción que se escribe sola (ver update)
+		descFull = options[curSelected].description;
+		descShown = 0;
+		descText.text = '';
+
 		progressTxt.visible = progressBar.visible = hasProgress;
 
 		if(barTween != null) barTween.cancel();
@@ -352,12 +472,6 @@ class AchievementsMenuState extends MusicBeatState
 			});
 		}
 		else progressBar.percent = 0;
-
-		for (num => item in achTexts)
-		{
-			item.alpha = (num == curSelected) ? 1 : 0.6;
-			grpOptions.members[num].alpha = item.alpha;
-		}
 
 		refreshBigIcon();
 	}

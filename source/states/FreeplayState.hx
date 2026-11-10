@@ -75,7 +75,6 @@ class FreeplayState extends MusicBeatState
 
 	// Los PNG de assets/shared/images/freeplay/ están a 720 de alto.
 	static inline final DESIGN_H:Float = 720;
-	static inline final TINT_ALPHA:Float = 0.15; // cuánto tiñe el color de la canción al fondo
 	static inline final SEL_Y:Float = 291;       // y del centro de la canción elegida
 	static inline final ROW_STEP:Float = 150;    // separación con las canciones vecinas
 	static inline final ROW_STEP_FAR:Float = 118; // separación entre las más lejanas
@@ -157,11 +156,9 @@ class FreeplayState extends MusicBeatState
 		pin(artBG);
 		add(artBG);
 
-		// Capa con el color de la canción (muy suave)
-		bg = new FlxSprite().makeGraphic(Std.int(W), Std.int(H), FlxColor.WHITE);
-		bg.alpha = TINT_ALPHA;
-		pin(bg);
-		add(bg);
+		// El fondo (blanco/gris) se pinta directamente con el color de la canción,
+		// sin ninguna capa encima. `bg` apunta al mismo sprite para el tween de color.
+		bg = artBG;
 
 		// ---------- Cuadros (images/freeplay/checker.png, con transparencia) ----------
 		if (Paths.fileExists('images/freeplay/checker.png', AssetType.IMAGE))
@@ -811,7 +808,7 @@ class FreeplayState extends MusicBeatState
 			// El texto va pegado a la izquierda del icono y se achica si no cabe
 			var iconLeft:Float = iconCX - icon.width / 2;
 			var avail:Float = iconLeft - 12 * s - 24 * s;
-			var sc:Float = Math.max(0.45, Math.min(1, avail / songTextW[i]));
+			var sc:Float = Math.max(0.3, Math.min(1, avail / songTextW[i]));
 			item.scale.set(sc, sc);
 			item.updateHitbox();
 
