@@ -3,6 +3,7 @@ package states;
 import backend.WeekData;
 import backend.Highscore;
 import backend.Song;
+import backend.MenuBG;
 
 import objects.HealthIcon;
 import objects.MusicPlayer;
@@ -146,14 +147,7 @@ class FreeplayState extends MusicBeatState
 		var aa:Bool = ClientPrefs.data.antialiasing;
 
 		// ---------- Fondo (images/freeplay/bg.png) ----------
-		var hasBgPng:Bool = Paths.fileExists('images/freeplay/bg.png', AssetType.IMAGE);
-		artBG = new FlxSprite().loadGraphic(Paths.image(hasBgPng ? 'freeplay/bg' : 'menuDesat'));
-		artBG.antialiasing = aa;
-		var bgScale:Float = Math.max(W / artBG.width, H / artBG.height);
-		artBG.setGraphicSize(Std.int(artBG.width * bgScale));
-		artBG.updateHitbox();
-		artBG.setPosition((W - artBG.width) / 2, (H - artBG.height) / 2);
-		pin(artBG);
+		artBG = MenuBG.create('menuDesat');
 		add(artBG);
 
 		// El fondo (blanco/gris) se pinta directamente con el color de la canción,
@@ -327,6 +321,9 @@ class FreeplayState extends MusicBeatState
 
 		changeSelection();
 		updateTexts();
+
+		var bgWarning:FlxText = MenuBG.warning();
+		if (bgWarning != null) add(bgWarning);
 
 		addTouchPad('LEFT_FULL', 'A_B_X_Y'); // ← sin C ni Z
 		super.create();

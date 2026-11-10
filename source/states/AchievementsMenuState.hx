@@ -8,6 +8,7 @@ import flixel.graphics.FlxGraphic;
 import openfl.utils.AssetType;
 import mobile.backend.MobileScaleMode;
 import objects.Bar;
+import backend.MenuBG;
 
 #if ACHIEVEMENTS_ALLOWED
 /**
@@ -102,15 +103,7 @@ class AchievementsMenuState extends MusicBeatState
 		centerX = (EDGE_X * imgScale + W) / 2;
 
 		// ---------- Fondo (blanco/gris, se pinta directo: dorado = desbloqueado, gris = bloqueado) ----------
-		artBG = new FlxSprite().loadGraphic(Paths.image(Paths.fileExists('images/freeplay/bg.png', AssetType.IMAGE) ? 'freeplay/bg' : 'menuBGBlue'));
-		artBG.antialiasing = aa;
-		var bgScale:Float = Math.max(W / artBG.width, H / artBG.height);
-		artBG.setGraphicSize(Std.int(artBG.width * bgScale));
-		artBG.updateHitbox();
-		artBG.setPosition((W - artBG.width) / 2, (H - artBG.height) / 2);
-		artBG.alpha = 0;
-		FlxTween.tween(artBG, {alpha: 1}, 0.5, {ease: FlxEase.quadOut});
-		pin(artBG);
+		artBG = MenuBG.create('menuBGBlue');
 		add(artBG);
 
 		// ---------- Anillos HUD giratorios detrás del icono grande ----------
@@ -273,6 +266,9 @@ class AchievementsMenuState extends MusicBeatState
 		add(progressTxt);
 		add(descText);
 		add(nameText);
+
+		var bgWarning:FlxText = MenuBG.warning();
+		if (bgWarning != null) add(bgWarning);
 
 		if(options.length < 1)
 		{

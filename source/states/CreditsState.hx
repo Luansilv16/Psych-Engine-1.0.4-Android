@@ -5,6 +5,7 @@ import flixel.math.FlxPoint;
 import flixel.util.FlxSpriteUtil;
 import openfl.utils.AssetType;
 import mobile.backend.MobileScaleMode;
+import backend.MenuBG;
 
 /**
  * Créditos futuristas NixerEngine (misma familia visual que Freeplay y Logros):
@@ -120,15 +121,7 @@ class CreditsState extends MusicBeatState
 			creditsStuff.push(i);
 
 		// ---------- Fondo (blanco/gris: se pinta directo con el color de cada persona) ----------
-		bg = new FlxSprite().loadGraphic(Paths.image(Paths.fileExists('images/freeplay/bg.png', AssetType.IMAGE) ? 'freeplay/bg' : 'menuDesat'));
-		bg.antialiasing = aa;
-		var bgScale:Float = Math.max(W / bg.width, H / bg.height);
-		bg.setGraphicSize(Std.int(bg.width * bgScale));
-		bg.updateHitbox();
-		bg.setPosition((W - bg.width) / 2, (H - bg.height) / 2);
-		bg.alpha = 0;
-		FlxTween.tween(bg, {alpha: 1}, 0.5, {ease: FlxEase.quadOut});
-		pin(bg);
+		bg = MenuBG.create('menuDesat');
 		add(bg);
 
 		if (Paths.fileExists('images/freeplay/checker.png', AssetType.IMAGE))
@@ -323,6 +316,9 @@ class CreditsState extends MusicBeatState
 		intendedColor = bg.color;
 		changeSelection();
 
+		var bgWarning:FlxText = MenuBG.warning();
+		if (bgWarning != null) add(bgWarning);
+
 		addTouchPad('UP_DOWN', 'A_B');
 
 		super.create();
@@ -332,7 +328,8 @@ class CreditsState extends MusicBeatState
 	{
 		var c:String = creditsStuff[i][4];
 		if (c == null || c.length < 1) return 0xFF6A6AA0;
-		return CoolUtil.colorFromString(c);
+		// Los colores muy oscuros (2B2B47, 393939...) se aclaran para que el fondo no quede negro
+		return MenuBG.lift(CoolUtil.colorFromString(c));
 	}
 
 	// Muestra solo el dominio/usuario del enlace
