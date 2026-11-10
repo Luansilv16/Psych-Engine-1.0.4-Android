@@ -168,7 +168,18 @@ class CustomFadeTransition extends FlxSubState {
 		if (t >= 1 && !closing)
 		{
 			closing = true;
-			close();
+
+			if (!isTransIn && finishCallback != null)
+			{
+				// CUBRIR terminado: NO se cierra la transición. Se deja la pantalla tapada y
+				// solo se avisa para cambiar de state. Flixel destruye este substate y su
+				// cámara al ejecutar el cambio, así que el menú anterior nunca se ve entre
+				// medio (ni durante la carga del nuevo state).
+				var cb:Void->Void = finishCallback;
+				finishCallback = null;
+				cb();
+			}
+			else close();
 		}
 	}
 
