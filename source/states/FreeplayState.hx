@@ -15,6 +15,7 @@ import flixel.math.FlxMath;
 import flixel.FlxObject;
 import flixel.math.FlxPoint;
 import flixel.util.FlxDestroyUtil;
+import flixel.util.FlxTimer;
 import flixel.util.FlxSpriteUtil;
 
 import openfl.utils.AssetType;
@@ -73,6 +74,14 @@ class FreeplayState extends MusicBeatState
 	var scoreRight:Float = 0;
 	var checker:FlxSprite;
 	var mic:FlxSprite;
+	var micAnimated:Bool = false;
+	var micBaseX:Float = 0;
+	var micBaseY:Float = 0;
+	var micBaseScale:Float = 1;
+	var animT:Float = 0;
+	var selecting:Bool = false;
+	var selectPulse:Float = 0; // 0→1→0: "salto" de la canción elegida
+	var selectDim:Float = 0;   // 0→1: apaga las demás canciones al elegir
 
 	// Los PNG de assets/shared/images/freeplay/ están a 720 de alto.
 	static inline final DESIGN_H:Float = 720;
@@ -81,7 +90,9 @@ class FreeplayState extends MusicBeatState
 	static inline final ROW_STEP_FAR:Float = 118; // separación entre las más lejanas
 	static inline final ICON_CX:Float = 337;     // x del centro del icono elegido
 	static inline final ICON_CURVE:Float = 14.7; // cuánto se curva la lista
-	static inline final MIC_X:Float = 393;
+	static inline final MIC_X:Float = 393;       // mic estático (mic.png)
+	static inline final MIC_ANIM_X:Float = 387;  // mic animado (mic_anim.png, cuadros de 140x82)
+	static inline final MIC_ANIM_Y:Float = 250;
 	static inline final MIC_Y:Float = 254;
 
 	inline function pin(o:FlxObject):Void
@@ -195,14 +206,33 @@ class FreeplayState extends MusicBeatState
 		pin(leftPanel);
 		add(leftPanel);
 
-		// ---------- Micrófono (images/freeplay/mic.png), fijo junto a la canción elegida ----------
-		if (Paths.fileExists('images/freeplay/mic.png', AssetType.IMAGE))
+		// ---------- Micrófono: animado (mic_anim.png) o estático (mic.png), junto a la canción elegida ----------
+		if (Paths.fileExists('images/freeplay/mic_anim.png', AssetType.IMAGE))
+		{
+			// Hoja de 6x5 cuadros de 140x82: idle = 0-19, select = 20-29
+			mic = new FlxSprite();
+			mic.loadGraphic(Paths.image('freeplay/mic_anim'), true, 140, 82);
+			mic.animation.add('idle', [for (i in 0...20) i], 24, false);    // entra y se queda quieto
+			mic.animation.add('bump', [2, 3, 4, 5], 24, false);             // rebote al cambiar de canción
+			mic.animation.add('select', [for (i in 20...30) i], 24, false); // al elegir una canción
+			mic.animation.play('idle');
+			micAnimated = true;
+			micBaseX = MIC_ANIM_X * imgScale;
+			micBaseY = MIC_ANIM_Y * imgScale;
+		}
+		else if (Paths.fileExists('images/freeplay/mic.png', AssetType.IMAGE))
 		{
 			mic = new FlxSprite().loadGraphic(Paths.image('freeplay/mic'));
+			micBaseX = MIC_X * imgScale;
+			micBaseY = MIC_Y * imgScale;
+		}
+		if (mic != null)
+		{
 			mic.antialiasing = aa;
 			mic.scale.set(imgScale, imgScale);
 			mic.updateHitbox();
-			mic.setPosition(MIC_X * imgScale, MIC_Y * imgScale);
+			mic.setPosition(micBaseX, micBaseY);
+			micBaseScale = imgScale;
 			pin(mic);
 			add(mic);
 		}
@@ -374,6 +404,17 @@ class FreeplayState extends MusicBeatState
 
 		if (FlxG.sound.music.volume < 0.7)
 			FlxG.sound.music.volume += 0.5 * elapsed;
+
+		animT += elapsed;
+		updateMic();
+
+		// Mientras suena la animación de "select" no se acepta ninguna entrada
+		if (selecting)
+		{
+			updateTexts(elapsed);
+			super.update(elapsed);
+			return;
+		}
 
 		lerpScore = Math.floor(FlxMath.lerp(intendedScore, lerpScore, Math.exp(-elapsed * 24)));
 		lerpRating = FlxMath.lerp(intendedRating, lerpRating, Math.exp(-elapsed * 12));
@@ -578,21 +619,8 @@ class FreeplayState extends MusicBeatState
 				return;
 			}
 
-			@:privateAccess
-			if(PlayState._lastLoadedModDirectory != Mods.currentModDirectory)
-			{
-				trace('CHANGED MOD DIRECTORY, RELOADING STUFF');
-				Paths.freeGraphicsFromMemory();
-			}
-			LoadingState.prepareToSong();
-			LoadingState.loadAndSwitchState(new PlayState());
-			#if !SHOW_LOADING_SCREEN FlxG.sound.music.stop(); #end
-			stopMusicPlay = true;
-
-			destroyFreeplayVocals();
-			#if (MODS_ALLOWED && DISCORD_ALLOWED)
-			DiscordClient.loadModRPC();
-			#end
+			// Chart cargado sin errores: animación de select y luego a la canción
+			playSelectAnimation();
 		}
 		else if((controls.RESET || touchPad.buttonY.justPressed) && !player.playingMusic)
 		{
@@ -662,6 +690,7 @@ class FreeplayState extends MusicBeatState
 		curSelected = FlxMath.wrap(curSelected + change, 0, songs.length-1);
 		_updateSongLastDifficulty();
 		if(playSound) FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
+		if (micAnimated && !selecting && change != 0) mic.animation.play('bump', true);
 
 		var newColor:Int = songs[curSelected].color;
 		if(newColor != intendedColor)
@@ -769,6 +798,73 @@ class FreeplayState extends MusicBeatState
 
 	var _drawDistance:Int = 4;
 	var _lastVisibles:Array<Int> = [];
+	// Sway suave del mic cuando está quieto
+	function updateMic():Void
+	{
+		if (mic == null || selecting) return;
+		var s:Float = FlxG.height / DESIGN_H;
+		mic.y = micBaseY + Math.sin(animT * 2.2) * 2.5 * s;
+		mic.angle = Math.sin(animT * 1.6) * 1.2;
+	}
+
+	// Animación de "select": mic en negro, salto del icono y el texto elegidos,
+	// las demás canciones se apagan, destello suave, y después se carga la canción.
+	function playSelectAnimation():Void
+	{
+		selecting = true;
+		FlxG.sound.play(Paths.sound('confirmMenu'), 0.7);
+
+		if (mic != null)
+		{
+			mic.angle = 0;
+			mic.y = micBaseY;
+			if (micAnimated) mic.animation.play('select', true);
+			FlxTween.cancelTweensOf(mic.scale);
+			mic.scale.set(micBaseScale * 1.2, micBaseScale * 1.2);
+			FlxTween.tween(mic.scale, {x: micBaseScale, y: micBaseScale}, 0.4, {ease: FlxEase.backOut});
+		}
+
+		// Icono y texto elegidos: salto rápido (sube a 1 y vuelve a 0)
+		FlxTween.num(0, 1, 0.12, {ease: FlxEase.quadOut, onComplete: function(_)
+		{
+			FlxTween.num(1, 0, 0.4, {ease: FlxEase.quadOut}, function(v:Float) selectPulse = v);
+		}}, function(v:Float) selectPulse = v);
+		FlxTween.num(0, 1, 0.3, {ease: FlxEase.quadOut}, function(v:Float) selectDim = v);
+
+		// Destello blanco
+		var flash:FlxSprite = new FlxSprite().makeGraphic(Std.int(FlxG.width + MobileScaleMode.gameCutoutSize.x * 2), FlxG.height, FlxColor.WHITE);
+		flash.scrollFactor.set();
+		flash.alpha = 0.3;
+		add(flash);
+		FlxTween.tween(flash, {alpha: 0}, 0.4, {ease: FlxEase.quadOut, onComplete: function(_) {
+			remove(flash, true);
+			flash.destroy();
+		}});
+
+		// Deja ver la animación completa del mic antes de cargar
+		new FlxTimer().start(0.65, function(_) goToSong());
+	}
+
+	// Lo que antes se hacía al instante al aceptar
+	function goToSong():Void
+	{
+		@:privateAccess
+		if(PlayState._lastLoadedModDirectory != Mods.currentModDirectory)
+		{
+			trace('CHANGED MOD DIRECTORY, RELOADING STUFF');
+			Paths.freeGraphicsFromMemory();
+		}
+		LoadingState.prepareToSong();
+		LoadingState.loadAndSwitchState(new PlayState());
+		#if !SHOW_LOADING_SCREEN FlxG.sound.music.stop(); #end
+		stopMusicPlay = true;
+
+		destroyFreeplayVocals();
+		#if (MODS_ALLOWED && DISCORD_ALLOWED)
+		DiscordClient.loadModRPC();
+		#end
+	}
+
 	public function updateTexts(elapsed:Float = 0.0)
 	{
 		lerpSelected = FlxMath.lerp(curSelected, lerpSelected, Math.exp(-elapsed * 9.6));
@@ -794,10 +890,16 @@ class FreeplayState extends MusicBeatState
 			// Las canciones lejanas se van apagando
 			var fade:Float = Math.max(0.25, Math.min(1, 1.15 - 0.3 * ad));
 
+			// Al elegir: la canción elegida salta y se tiñe de cian, las demás se apagan
+			var isSel:Bool = (i == curSelected);
+			if (!isSel) fade *= 1 - 0.75 * selectDim;
+			if (isSel) iconCX += 16 * s * selectPulse;
+
 			var icon:HealthIcon = iconArray[i];
 			var item:FlxText = songTexts[i];
+			item.color = isSel ? FlxColor.interpolate(FlxColor.WHITE, 0xFF00F0FF, selectPulse) : FlxColor.WHITE;
 
-			var iconSc:Float = (0.55 + 0.08 * Math.max(0, 1 - ad)) * s;
+			var iconSc:Float = (0.55 + 0.08 * Math.max(0, 1 - ad) + (isSel ? 0.2 * selectPulse : 0)) * s;
 			icon.scale.set(iconSc, iconSc);
 			icon.updateHitbox();
 			icon.alpha = item.alpha = fade;
