@@ -167,6 +167,9 @@ class PlayState extends MusicBeatState
 	public var opponentStrums:FlxTypedGroup<StrumNote> = new FlxTypedGroup<StrumNote>();
 	public var playerStrums:FlxTypedGroup<StrumNote> = new FlxTypedGroup<StrumNote>();
 	public var grpNoteSplashes:FlxTypedGroup<NoteSplash> = new FlxTypedGroup<NoteSplash>();
+	public var grpHoldCovers:FlxTypedGroup<HoldCover> = new FlxTypedGroup<HoldCover>();
+	public var opponentHoldCovers:Array<HoldCover> = [];
+	public var playerHoldCovers:Array<HoldCover> = [];
 
 	public var camZooming:Bool = false;
 	public var camZoomingMult:Float = 1;
@@ -519,6 +522,7 @@ class PlayState extends MusicBeatState
 		generateSong();
 
 		noteGroup.add(grpNoteSplashes);
+		noteGroup.add(grpHoldCovers);
 
 		camFollow = new FlxObject();
 		camFollow.setPosition(camPos.x, camPos.y);
@@ -995,6 +999,7 @@ class PlayState extends MusicBeatState
 			canPause = true;
 			generateStaticArrows(0);
 			generateStaticArrows(1);
+			generateHoldCovers();
 			for (i in 0...playerStrums.length) {
 				setOnScripts('defaultPlayerStrumX' + i, playerStrums.members[i].x);
 				setOnScripts('defaultPlayerStrumY' + i, playerStrums.members[i].y);
@@ -1552,6 +1557,40 @@ class PlayState extends MusicBeatState
 	}
 
 	public var skipArrowStartTween:Bool = false; //for lua
+	function generateHoldCovers():Void
+	{
+		if (!ClientPrefs.data.holdSplash || !HoldCover.assetsExist()) return;
+
+		for (strum in opponentStrums)
+		{
+			var cover:HoldCover = new HoldCover(strum, false);
+			opponentHoldCovers.push(cover);
+			grpHoldCovers.add(cover);
+		}
+		for (strum in playerStrums)
+		{
+			var cover:HoldCover = new HoldCover(strum, true);
+			playerHoldCovers.push(cover);
+			grpHoldCovers.add(cover);
+		}
+	}
+
+	function holdCoverHit(opponent:Bool, note:Note):Void
+	{
+		var covers:Array<HoldCover> = opponent ? opponentHoldCovers : playerHoldCovers;
+		var cover:HoldCover = covers[Std.int(Math.abs(note.noteData))];
+		if (cover == null) return;
+
+		var animName:String = (note.animation.curAnim != null) ? note.animation.curAnim.name : '';
+		cover.hit(animName.endsWith('end'));
+	}
+
+	function hidePlayerHoldCover(data:Int):Void
+	{
+		var cover:HoldCover = playerHoldCovers[data];
+		if (cover != null) cover.hide();
+	}
+
 	private function generateStaticArrows(player:Int):Void
 	{
 		var strumLineX:Float = ClientPrefs.data.middleScroll ? STRUM_X_MIDDLESCROLL : STRUM_X;
@@ -1629,6 +1668,7 @@ class PlayState extends MusicBeatState
 			FlxTween.globalManager.forEach(function(twn:FlxTween) if(!twn.finished) twn.active = true);
 
 			paused = false;
+			for (i in 0...playerHoldCovers.length) hidePlayerHoldCover(i);
 			callOnScripts('onResume');
 			resetRPC(startTimer != null && startTimer.finished);
 			runSongSyncThread();
@@ -2835,6 +2875,7 @@ class PlayState extends MusicBeatState
 			spr.playAnim('static');
 			spr.resetAnim = 0;
 		}
+		hidePlayerHoldCover(key);
 		callOnScripts('onKeyRelease', [key]);
 	}
 
@@ -2954,6 +2995,8 @@ class PlayState extends MusicBeatState
 
 	function noteMissCommon(direction:Int, note:Note = null)
 	{
+		if (direction >= 0) hidePlayerHoldCover(direction);
+
 		// score and data
 		var subtract:Float = pressMissDamage;
 		if(note != null) subtract = note.missHealth;
@@ -3078,6 +3121,7 @@ class PlayState extends MusicBeatState
 		var result:Dynamic = callOnLuas('opponentNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
 		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('opponentNoteHit', [note]);
 
+		if (note.isSustainNote) holdCoverHit(true, note);
 		if (!note.isSustainNote) invalidateNote(note);
 	}
 
@@ -3180,6 +3224,7 @@ class PlayState extends MusicBeatState
 		stagesFunc(function(stage:BaseStage) stage.goodNoteHit(note));
 		var result:Dynamic = callOnLuas('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
 		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('goodNoteHit', [note]);
+		if(note.isSustainNote) holdCoverHit(false, note);
 		if(!note.isSustainNote) invalidateNote(note);
 	}
 
