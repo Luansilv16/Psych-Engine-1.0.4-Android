@@ -58,6 +58,12 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		option.onChange = onChangeVibration;
 
+		var option:Option = new Option('Freeplay Icon Animation',
+			"If enabled, custom icons in Freeplay can animate. Disable it to keep them static.",
+			'freeplayIconAnimation',
+			BOOL);
+		addOption(option);
+
 		var option:Option = new Option('Sustains as One Note',
 			"If checked, Hold Notes can't be pressed if you miss,\nand count as a single Hit/Miss.\nUncheck this if you prefer the old Input System.",
 			'guitarHeroSustains',
