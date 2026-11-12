@@ -15,6 +15,8 @@ import mobile.backend.MobileScaleMode;
 import states.StoryMenuState;
 import states.FreeplayState;
 import options.OptionsState;
+import options.GameplayChangersSubstate;
+import openfl.utils.AssetType;
 
 #if MODS_ALLOWED
 import sys.FileSystem;
@@ -39,7 +41,7 @@ class PauseSubState extends MusicBeatSubstate
 	var lerpSelected:Float = 0;
 
 	var menuItems:Array<String> = [];
-	var menuItemsOG:Array<String> = ['Resume', 'Restart Song', 'Chart Editor', 'Change Difficulty', 'Options', 'Exit to menu'];
+	var menuItemsOG:Array<String> = ['Resume', 'Restart Song', 'Chart Editor', 'Change Difficulty', 'Gameplay Changers', 'Options', 'Exit to menu'];
 	var difficultyChoices = [];
 	var curSelected:Int = 0;
 
@@ -206,8 +208,15 @@ class PauseSubState extends MusicBeatSubstate
 		pauseCam.bgColor = FlxColor.TRANSPARENT;
 		FlxG.cameras.add(pauseCam, false);
 
-		// Acento futurista fijo: el pause menu no depende de datos de Freeplay.
+		// El color de acento se toma del color de salud del oponente actual.
 		accent = 0xFF00E5FF;
+		try
+		{
+			var opponentColors:Array<Int> = cast Reflect.field(PlayState.instance.dad, 'healthColorArray');
+			if (opponentColors != null && opponentColors.length >= 3)
+				accent = FlxColor.fromRGB(opponentColors[0], opponentColors[1], opponentColors[2]);
+		}
+		catch (e:Dynamic) {}
 
 		// ---------- Fondo independiente de Freeplay ----------
 		var dimAlpha:Float = 0.88;
@@ -274,6 +283,25 @@ class PauseSubState extends MusicBeatSubstate
 		}
 		leftPanel.scrollFactor.set();
 		leftGroup.add(leftPanel);
+
+		// Engranajes animados del botón OPTIONS (atlas optionsButton).
+		try
+		{
+			var optionsCog:FlxSprite = new FlxSprite();
+			optionsCog.frames = Paths.getSparrowAtlas('freeplay/optionsButton');
+			optionsCog.animation.addByPrefix('idle', 'options', 24, true);
+			optionsCog.animation.play('idle');
+			optionsCog.setGraphicSize(Std.int(Math.min(104, H * 0.15)));
+			optionsCog.updateHitbox();
+			optionsCog.x = edgeAt(118) - optionsCog.width - 18;
+			optionsCog.y = 96;
+			optionsCog.scrollFactor.set();
+			leftGroup.add(optionsCog);
+		}
+		catch (e:Dynamic)
+		{
+			trace('Pause OPTIONS atlas not found: ' + e);
+		}
 
 		var title:FlxText = new FlxText(36, 26, 0, Language.getPhrase('pause_title', 'PAUSED').toUpperCase(), 46);
 		title.setFormat(fontPath, 46, accent, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -406,7 +434,29 @@ class PauseSubState extends MusicBeatSubstate
 		panel.scrollFactor.set();
 		infoGroup.add(panel);
 
-		var levelInfo:FlxText = new FlxText(textX, 10, 0, PlayState.SONG.song.toUpperCase(), 28);
+		// Reutiliza el arte de Freeplay: primero el oponente y luego la canción.
+		var pauseArt:FlxSprite = new FlxSprite();
+		var opponentArtKey:String = 'freeplay/art/' + PlayState.SONG.player2;
+		var songArtKey:String = 'freeplay/art/' + Paths.formatToSongPath(PlayState.SONG.song);
+		var chosenArtKey:String = null;
+		if (Paths.fileExists('images/' + opponentArtKey + '.png', AssetType.IMAGE))
+			chosenArtKey = opponentArtKey;
+		else if (Paths.fileExists('images/' + songArtKey + '.png', AssetType.IMAGE))
+			chosenArtKey = songArtKey;
+		if (chosenArtKey != null)
+		{
+			pauseArt.loadGraphic(Paths.image(chosenArtKey));
+			pauseArt.setGraphicSize(Std.int(Math.min(104, H * 0.15)));
+			pauseArt.updateHitbox();
+			pauseArt.x = W - pauseArt.width - 18;
+			pauseArt.y = 12;
+			pauseArt.scrollFactor.set();
+			pauseArt.alpha = 0.95;
+			infoGroup.add(pauseArt);
+		}
+		textW = Math.max(120, textW - 116);
+
+		var levelInfo:FlxText = new FlxText(textX, 10, textW, PlayState.SONG.song.toUpperCase(), 28);
 		levelInfo.setFormat(fontPath, 28, FlxColor.WHITE, LEFT);
 		levelInfo.scrollFactor.set();
 		fitText(levelInfo, textW);
@@ -416,7 +466,7 @@ class PauseSubState extends MusicBeatSubstate
 		{
 			var label:String = rows[i][0].toUpperCase();
 			var line:String = rows[i][1] == '' ? label : label + ' // ' + rows[i][1].toUpperCase();
-			var t:FlxText = new FlxText(textX, 52 + i * 26, 0, line, 18);
+			var t:FlxText = new FlxText(textX, 52 + i * 26, textW, line, 18);
 			t.setFormat(fontPath, 18, FlxColor.WHITE, LEFT);
 			t.addFormat(new FlxTextFormat(accent), 0, label.length);
 			t.scrollFactor.set();
@@ -581,6 +631,8 @@ class PauseSubState extends MusicBeatSubstate
 
 			switch (daSelected)
 			{
+				case 'Gameplay Changers':
+					openSubState(new GameplayChangersSubstate());
 				case "Resume":
 					Paths.clearUnusedMemory();
 					close();
