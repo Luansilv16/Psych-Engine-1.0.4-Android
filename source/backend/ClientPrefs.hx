@@ -19,6 +19,7 @@ import states.TitleState;
 	public var popUpRating:Bool = true;
 	public var vsync:Bool = false;
 	public var gameOverVibration:Bool = false;
+	public var freeplayIconAnimation:Bool = true; // Animaciones de iconos personalizados en Freeplay
 	public var fpsRework:Bool = false;
 	
 	public var downScroll:Bool = false;
