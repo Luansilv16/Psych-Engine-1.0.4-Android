@@ -3183,12 +3183,17 @@ class PlayState extends MusicBeatState
 				}
 			}
 
-			if(!cpuControlled)
+			// No reiniciar el receptor en cada segmento de un sustain.
+			// La nota inicial activa confirm y la liberación devuelve el strum a static.
+			if (!note.isSustainNote)
 			{
-				var spr = playerStrums.members[note.noteData];
-				if(spr != null) spr.playAnim('confirm', true);
+				if(!cpuControlled)
+				{
+					var spr = playerStrums.members[note.noteData];
+					if(spr != null) spr.playAnim('confirm', true);
+				}
+				else strumPlayAnim(false, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate);
 			}
-			else strumPlayAnim(false, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate);
 			vocals.volume = 1;
 
 			if (!note.isSustainNote)

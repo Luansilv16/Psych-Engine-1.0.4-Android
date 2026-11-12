@@ -86,7 +86,7 @@ class HealthIcon extends FlxSprite
 		else
 		{
 			animation.stop();
-			frame = (selected && frames.frames.length > 1) ? 1 : 0;
+			animation.frameIndex = (selected && frames.frames.length > 1) ? 1 : 0;
 		}
 	}
 
