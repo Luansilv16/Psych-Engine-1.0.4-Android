@@ -5,6 +5,7 @@ class HealthIcon extends FlxSprite
 	public var sprTracker:FlxSprite;
 	private var isPlayer:Bool = false;
 	private var char:String = '';
+	private var isFreeplayCustomIcon:Bool = false;
 
 	public function new(char:String = 'face', isPlayer:Bool = false, ?allowGPU:Bool = true)
 	{
@@ -26,9 +27,20 @@ class HealthIcon extends FlxSprite
 	public function changeIcon(char:String, ?allowGPU:Bool = true) {
 		if(this.char != char) {
 			var name:String = 'icons/' + char;
-			if(!Paths.fileExists('images/' + name + '.png', IMAGE)) name = 'icons/icon-' + char; //Older versions of psych engine's support
-			if(!Paths.fileExists('images/' + name + '.png', IMAGE)) name = 'icons/icon-face'; //Prevents crash from missing icon
-			
+			var freeplayName:String = 'freeplay/icon/' + char;
+			isFreeplayCustomIcon = Paths.fileExists('images/' + freeplayName + '.png', IMAGE);
+
+			// Los iconos personalizados de Freeplay tienen prioridad.
+			if (isFreeplayCustomIcon)
+				name = freeplayName;
+			else if(!Paths.fileExists('images/' + name + '.png', IMAGE))
+				name = 'icons/icon-' + char; //Older versions of psych engine's support
+			if(!Paths.fileExists('images/' + name + '.png', IMAGE))
+			{
+				name = 'icons/icon-face'; //Prevents crash from missing icon
+				isFreeplayCustomIcon = false;
+			}
+
 			var graphic = Paths.image(name, allowGPU);
 			var iSize:Float = Math.round(graphic.width / graphic.height);
 			loadGraphic(graphic, true, Math.floor(graphic.width / iSize), Math.floor(graphic.height));
@@ -55,6 +67,26 @@ class HealthIcon extends FlxSprite
 		{
 			offset.x = iconOffsets[0];
 			offset.y = iconOffsets[1];
+		}
+	}
+
+
+	// Freeplay: frame 0 = normal y frame 1 = feliz en iconos personalizados.
+	public function setFreeplaySelected(selected:Bool):Void
+	{
+		if (!isFreeplayCustomIcon || frames == null || frames.frames == null || frames.frames.length == 0)
+			return;
+
+		if (ClientPrefs.data.freeplayIconAnimation && frames.frames.length > 1)
+		{
+			if (animation.getByName('freeplayLoop') == null)
+				animation.add('freeplayLoop', [for (i in 0...frames.frames.length) i], 10, true);
+			animation.play('freeplayLoop', true);
+		}
+		else
+		{
+			animation.stop();
+			frame = (selected && frames.frames.length > 1) ? 1 : 0;
 		}
 	}
 
