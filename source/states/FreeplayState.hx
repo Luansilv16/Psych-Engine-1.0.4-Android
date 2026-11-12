@@ -355,7 +355,7 @@ class FreeplayState extends MusicBeatState
 		var bgWarning:FlxText = MenuBG.warning();
 		if (bgWarning != null) add(bgWarning);
 
-		addTouchPad('LEFT_FULL', 'A_B_X_Y'); // ← sin C ni Z
+		addTouchPad('LEFT_FULL', 'A_B_C_X_Y'); // Android: C abre Gameplay Changers
 		super.create();
 	}
 
@@ -374,7 +374,7 @@ class FreeplayState extends MusicBeatState
 		persistentUpdate = true;
 		super.closeSubState();
 		removeTouchPad();
-		addTouchPad('LEFT_FULL', 'A_B_X_Y'); // ← sin C ni Z
+		addTouchPad('LEFT_FULL', 'A_B_C_X_Y'); // Android: C abre Gameplay Changers
 	}
 
 	public function addSong(songName:String, weekNum:Int, songCharacter:String, color:Int, composer:String = '')
@@ -407,6 +407,7 @@ class FreeplayState extends MusicBeatState
 
 		animT += elapsed;
 		updateMic();
+		if (composerText != null) composerText.visible = !player.playingMusic;
 
 		// Mientras suena la animación de "select" no se acepta ninguna entrada
 		if (selecting)
@@ -496,6 +497,7 @@ class FreeplayState extends MusicBeatState
 				instPlaying = -1;
 
 				player.playingMusic = false;
+				composerText.visible = true;
 				player.switchPlayMusic();
 
 				FlxG.sound.playMusic(Paths.music('freakyMenu'), 0);
@@ -509,8 +511,15 @@ class FreeplayState extends MusicBeatState
 			}
 		}
 
-		// Se quitó la detección de C / CONTROL para abrir Gameplay Changers
-		// Ahora solo se puede abrir con el botón correspondiente si lo agregas manualmente
+		// Gameplay Changers: CTRL en PC y botón C en Android
+		if ((FlxG.keys.justPressed.CONTROL || touchPad.buttonC.justPressed) && !player.playingMusic)
+		{
+			persistentUpdate = false;
+			openSubState(new GameplayChangersSubstate());
+			removeTouchPad();
+			FlxG.sound.play(Paths.sound('scrollMenu'));
+		}
+
 		if(FlxG.keys.justPressed.SPACE || touchPad.buttonX.justPressed)
 		{
 			if(instPlaying != curSelected && !player.playingMusic)
@@ -577,6 +586,7 @@ class FreeplayState extends MusicBeatState
 				instPlaying = curSelected;
 
 				player.playingMusic = true;
+				composerText.visible = false;
 				player.curTime = 0;
 				player.switchPlayMusic();
 				player.pauseOrResume(true);
@@ -677,6 +687,17 @@ class FreeplayState extends MusicBeatState
 		else
 			diffText.text = diffLabel + displayDiff;
 
+		// Reduce el texto de dificultad si es demasiado largo para el panel.
+		diffText.scale.set(1, 1);
+		diffText.updateHitbox();
+		var diffMaxW:Float = Math.max(80, scoreRight - panelTextX - 24);
+		if (diffText.width > diffMaxW)
+		{
+			var diffScale:Float = diffMaxW / diffText.width;
+			diffText.scale.set(diffScale, diffScale);
+			diffText.updateHitbox();
+		}
+
 		positionHighscore();
 		missingText.visible = false;
 		missingTextBG.visible = false;
@@ -705,6 +726,7 @@ class FreeplayState extends MusicBeatState
 			var icon:HealthIcon = iconArray[num];
 			item.alpha = 0.6;
 			icon.alpha = 0.6;
+			icon.setFreeplaySelected(num == curSelected);
 			if (num == curSelected)
 			{
 				item.alpha = 1;
