@@ -187,7 +187,7 @@ class MainMenuState extends MusicBeatState
 
 		if (!loaded)
 		{
-			optionShit = ['freeplay', #if MODS_ALLOWED 'mods', #end 'credits'];
+			optionShit = ['freeplay', #if MODS_ALLOWED 'mods', #end 'credits', 'bio'];
 			leftOption = #if ACHIEVEMENTS_ALLOWED 'achievements' #else null #end;
 			rightOption = 'options';
 			actions = new Map();
@@ -406,6 +406,8 @@ class MainMenuState extends MusicBeatState
 
 						case 'credits':
 							MusicBeatState.switchState(new CreditsState());
+						case 'bio' | 'biogallery':
+							MusicBeatState.switchState(new BioGalleryState());
 						case 'options':
 							MusicBeatState.switchState(new OptionsState());
 							OptionsState.onPlayState = false;
