@@ -6,8 +6,8 @@ permissions:
   discussions: write
 
 env:
-  PROJECT_NAME: PsychEngine
-  REPO_PATH: kittycathy233/FNF-PsychEngine-Mobile-1.0.4
+  PROJECT_NAME: NixerEngine
+  REPO_PATH: nyxen-roaring/NixerEngine-Android
 
 jobs:
   get-commit-hash:
@@ -31,7 +31,7 @@ jobs:
         run: |
           commit_hash=${GITHUB_SHA::7}
           echo "Latest commit hash is $commit_hash"
-          echo "::set-output name=COMMIT_HASH::$commit_hash"
+          echo "COMMIT_HASH=$commit_hash" >> $GITHUB_OUTPUT
 
   build:
     name: ${{ matrix.name }}
@@ -40,17 +40,11 @@ jobs:
       matrix:
         include:
           - name: Android
-            os: macos-15
+            os: ubuntu-latest
             buildArgs: "android -final -D officialBuild"
             setupCommand: sh ./setup/unix.sh
             artifactName: androidBuild
             artifactPath: "export/release/android/bin/app/build/outputs/apk/release/*.apk"
-          - name: iOS
-            os: macos-13
-            setupCommand: sh ./setup/unix.sh
-            buildArgs: "ios -final -nosign -D officialBuild"
-            artifactName: iOSBuild
-            artifactPath: "export/release/ios/build/Release-iphoneos/*.ipa"
     uses: ./.github/workflows/build.yml
     with:
         name: ${{ matrix.name }}
@@ -72,16 +66,15 @@ jobs:
            path: /home/runner
 
       - name: Move Android File
-        run: mv /home/runner/${{ env.PROJECT_NAME }}-release.apk /home/runner/${{ env.PROJECT_NAME }}-Android.apk
-
-      - name: Download iOS Build
-        uses: actions/download-artifact@main
-        with:
-           name: iOSBuild
-           path: ${{ github.workspace }}
-
-      - name: Zip iOS Build For Release
-        run: zip -r /home/runner/${{ env.PROJECT_NAME }}-iOS.zip ${{ github.workspace }}/${{ env.PROJECT_NAME }}.ipa
+        run: |
+          echo "Archivos descargados:"
+          find /home/runner -maxdepth 3 -name '*.apk'
+          APK="$(find /home/runner -name '*.apk' ! -name '${{ env.PROJECT_NAME }}-Android.apk' | head -n 1)"
+          if [ -z "$APK" ]; then
+            echo "No se encontro ningun APK"
+            exit 1
+          fi
+          mv "$APK" /home/runner/${{ env.PROJECT_NAME }}-Android.apk
 
       - name: Publish The Release
         uses: softprops/action-gh-release@v2
@@ -91,4 +84,3 @@ jobs:
           prerelease: true
           files: |
             /home/runner/*.apk
-            /home/runner/*.zip

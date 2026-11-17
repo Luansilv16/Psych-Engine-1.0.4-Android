@@ -3,14 +3,17 @@ package debug;
 import flixel.FlxG;
 import openfl.Lib;
 import haxe.Timer;
+import openfl.display.Sprite;
 import openfl.text.TextField;
+import openfl.text.TextFieldAutoSize;
 import openfl.text.TextFormat;
 import openfl.system.System as OpenFlSystem;
 import lime.system.System as LimeSystem;
 
 /**
-	The FPS class provides an easy-to-use monitor to display
-	the current frame rate of an OpenFL project
+	Contador de FPS estilo futurista de NixerEngine:
+	panel oscuro con borde inclinado, número grande, memoria y una barra de uso.
+	El color neón cambia con el rendimiento (cian / amarillo / rojo).
 **/
 #if cpp
 #if windows
@@ -21,15 +24,21 @@ import lime.system.System as LimeSystem;
 @:headerInclude('sys/utsname.h')
 #end
 #end
-class FPSCounter extends TextField
+class FPSCounter extends Sprite
 {
+	/** true = en la esquina superior derecha, false = superior izquierda */
+	public static var alignRight:Bool = true;
+
+	static inline var PANEL_W:Float = 176;
+	static inline var SLANT:Float = 18;
+
 	/**
 		The current frame rate, expressed using frames-per-second
 	**/
 	public var currentFPS(default, null):Int;
 
 	/**
-		The current memory usage (WARNING: this is NOT your total program memory usage, rather it shows the garbage collector memory)
+		The current memory usage in bytes (WARNING: this is NOT your total program memory usage, rather it shows the garbage collector memory)
 	**/
 	public var memoryMegas(get, never):Float;
 
@@ -40,6 +49,12 @@ class FPSCounter extends TextField
 	@:noCompletion private var prevTime:Int;
 
 	public var os:String = '';
+	public var textColor:Int = 0xFFFFFFFF;
+
+	var fpsNum:TextField;
+	var fpsLabel:TextField;
+	var memText:TextField;
+	var osText:TextField;
 
 	public function new(x:Float = 10, y:Float = 10, color:Int = 0x000000)
 	{
@@ -52,33 +67,126 @@ class FPSCounter extends TextField
 			os = '\nOS: ${LimeSystem.platformName}' #if cpp + ' ${getArch() != 'Unknown' ? getArch() : ''}' #end + ' - ${LimeSystem.platformVersion}';
 		#end
 
-		positionFPS(x, y);
+		mouseEnabled = false;
+		mouseChildren = false;
+
+		fpsNum = makeText(28, true, 0xFFFFFF);
+		fpsLabel = makeText(12, true, 0x00E5FF);
+		memText = makeText(12, false, 0xDDDDDD);
+		osText = makeText(10, false, 0x9AA0B4);
+		addChild(fpsNum);
+		addChild(fpsLabel);
+		addChild(memText);
+		addChild(osText);
 
 		currentFPS = 0;
-		selectable = false;
-		mouseEnabled = false;
-		defaultTextFormat = new TextFormat("_sans", 14, color);
-		width = FlxG.width;
-		multiline = true;
-		text = "FPS: ";
-
 		times = [];
 		lastFramerateUpdateTime = Timer.stamp();
 		prevTime = Lib.getTimer();
 		updateTime = prevTime + 500;
+
+		updateText();
+		positionFPS(x, y);
 	}
 
+	function makeText(size:Int, bold:Bool, color:Int):TextField
+	{
+		var t:TextField = new TextField();
+		t.selectable = false;
+		t.mouseEnabled = false;
+		t.multiline = false;
+		t.autoSize = TextFieldAutoSize.LEFT;
+		t.defaultTextFormat = new TextFormat("_sans", size, color, bold);
+		t.text = '';
+		return t;
+	}
 
 	public dynamic function updateText():Void // so people can override it in hscript
 	{
-		text = 
-		'FPS: $currentFPS' + 
-		'\nMemory: ${flixel.util.FlxStringUtil.formatBytes(memoryMegas)}' +
-		os;
+		var maxFps:Float = (FlxG.stage != null && FlxG.stage.window != null) ? FlxG.stage.window.frameRate : 60;
+		var ratio:Float = (maxFps > 0) ? currentFPS / maxFps : 1;
+		var accent:Int = (ratio >= 0.85) ? 0x00E5FF : ((ratio >= 0.5) ? 0xFFD600 : 0xFF1744);
+		textColor = 0xFF000000 | accent;
 
-		textColor = 0xFFFFFFFF;
-		if (currentFPS < FlxG.stage.window.frameRate * 0.5)
-			textColor = 0xFFFF0000;
+		var mem:Float = memoryMegas;
+		fpsNum.text = Std.string(currentFPS);
+		fpsLabel.text = 'FPS';
+		fpsLabel.textColor = accent;
+		memText.text = 'MEM ' + flixel.util.FlxStringUtil.formatBytes(mem);
+		osText.text = (os != null) ? StringTools.trim(os) : '';
+
+		drawPanel(accent, mem);
+	}
+
+	// Coloca los textos y dibuja el panel inclinado con borde neón y la barra de memoria
+	function drawPanel(accent:Int, mem:Float):Void
+	{
+		var pad:Float = 10;
+		var xs:Float = alignRight ? SLANT + pad - 4 : pad;
+
+		fpsNum.x = xs;
+		fpsNum.y = 0;
+		fpsLabel.x = fpsNum.x + fpsNum.width + 2;
+		fpsLabel.y = fpsNum.y + fpsNum.height - fpsLabel.height - 5;
+		memText.x = xs;
+		memText.y = fpsNum.y + fpsNum.height - 4;
+
+		var barY:Float = memText.y + memText.height + 1;
+		var h:Float = barY + 12;
+		osText.visible = (osText.text != '');
+		if (osText.visible)
+		{
+			osText.x = xs;
+			osText.y = barY + 8;
+			h = osText.y + osText.height + 4;
+		}
+
+		var g = graphics;
+		g.clear();
+
+		// Fondo oscuro semitransparente (borde inclinado)
+		g.beginFill(0x05060F, 0.62);
+		if (alignRight)
+		{
+			g.moveTo(0, 0);
+			g.lineTo(PANEL_W, 0);
+			g.lineTo(PANEL_W, h);
+			g.lineTo(SLANT, h);
+		}
+		else
+		{
+			g.moveTo(0, 0);
+			g.lineTo(PANEL_W, 0);
+			g.lineTo(PANEL_W - SLANT, h);
+			g.lineTo(0, h);
+		}
+		g.endFill();
+
+		// Borde neón (diagonal + base)
+		g.lineStyle(2, accent, 0.95);
+		if (alignRight)
+		{
+			g.moveTo(0, 0);
+			g.lineTo(SLANT, h);
+			g.lineTo(PANEL_W, h);
+		}
+		else
+		{
+			g.moveTo(PANEL_W, 0);
+			g.lineTo(PANEL_W - SLANT, h);
+			g.lineTo(0, h);
+		}
+		g.lineStyle();
+
+		// Barra de memoria (0 a 1 GB)
+		var bw:Float = PANEL_W - SLANT - xs - 8;
+		var fill:Float = Math.max(0, Math.min(1, mem / (1024 * 1024 * 1024)));
+		g.beginFill(0xFFFFFF, 0.14);
+		g.drawRect(xs, barY, bw, 4);
+		g.endFill();
+		g.beginFill(accent, 0.95);
+		g.drawRect(xs, barY, bw * fill, 4);
+		g.endFill();
 	}
 
 	var deltaTimeout:Float = 0.0;
@@ -134,9 +242,13 @@ class FPSCounter extends TextField
 	inline function get_memoryMegas():Float
 		return cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
 
-	public inline function positionFPS(X:Float, Y:Float, ?scale:Float = 1){
+	public inline function positionFPS(X:Float, Y:Float, ?scale:Float = 1)
+	{
 		scaleX = scaleY = #if android (scale > 1 ? scale : 1) #else (scale < 1 ? scale : 1) #end;
-		x = FlxG.game.x + X;
+		if (alignRight)
+			x = FlxG.stage.stageWidth - FlxG.game.x - width - X; // pegado al borde derecho
+		else
+			x = FlxG.game.x + X;
 		y = FlxG.game.y + Y;
 	}
 

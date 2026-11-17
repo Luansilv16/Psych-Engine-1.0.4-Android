@@ -1,0 +1,2 @@
+assets/shared/data/<cancion>/composer.txt
+para ponerle nombres de los compositores a tus songs

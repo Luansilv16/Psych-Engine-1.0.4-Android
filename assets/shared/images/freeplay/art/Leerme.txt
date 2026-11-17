@@ -1,0 +1,3 @@
+Arte del personaje: assets/images/freeplay/art/<cancion>.png. El nombre va en minúsculas y con guiones, por ejemplo my-song.png. Si falta, usa default.png de la misma carpeta, y si no hay ninguno, no muestra arte.
+Compositor: assets/data/<cancion>/composer.txt, con el nombre en la primera línea. Si no existe, pone ???.
+Fuente (opcional): assets/fonts/freeplay.ttf. Si no está, usa la fuente por defecto del juego. La de tu imagen es otra, así que dime cuál es o súbela.

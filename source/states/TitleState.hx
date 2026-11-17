@@ -1,5 +1,7 @@
 package states;
 
+import mobile.backend.MobileScaleMode;
+
 import backend.WeekData;
 
 import flixel.input.keyboard.FlxKey;
@@ -184,8 +186,9 @@ class TitleState extends MusicBeatState
 		titleText.updateHitbox();
 
 		blackScreen = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
-		blackScreen.scale.set(FlxG.width, FlxG.height);
+		blackScreen.scale.set(FlxG.width + MobileScaleMode.gameCutoutSize.x * 2, FlxG.height);
 		blackScreen.updateHitbox();
+		blackScreen.x = -MobileScaleMode.gameCutoutSize.x;
 		credGroup.add(blackScreen);
 
 		credTextShit = new Alphabet(0, 0, "", true);
@@ -250,6 +253,15 @@ class TitleState extends MusicBeatState
 					{
 						var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image(titleJSON.backgroundSprite));
 						bg.antialiasing = ClientPrefs.data.antialiasing;
+						// Cubrir toda la pantalla ancha
+						var wideW:Float = FlxG.width + MobileScaleMode.gameCutoutSize.x * 2;
+						if (bg.width < wideW)
+						{
+							bg.setGraphicSize(Std.int(wideW));
+							bg.updateHitbox();
+						}
+						bg.x = (FlxG.width - bg.width) / 2;
+						bg.screenCenter(Y);
 						add(bg);
 					}
 				}
@@ -409,8 +421,9 @@ class TitleState extends MusicBeatState
 							FlxG.sound.play(Paths.sound('secret'));
 
 							var black:FlxSprite = new FlxSprite(0, 0).makeGraphic(1, 1, FlxColor.BLACK);
-							black.scale.set(FlxG.width, FlxG.height);
+							black.scale.set(FlxG.width + MobileScaleMode.gameCutoutSize.x * 2, FlxG.height);
 							black.updateHitbox();
+							black.x = -MobileScaleMode.gameCutoutSize.x;
 							black.alpha = 0;
 							add(black);
 
@@ -519,16 +532,16 @@ class TitleState extends MusicBeatState
 					FlxG.sound.playMusic(Paths.music('freakyMenu'), 0);
 					FlxG.sound.music.fadeIn(4, 0, 0.7);
 				case 2:
-					createCoolText(['Psych Engine by'], 40);
+					createCoolText(['Nixer Engine by'], 40);
 				case 4:
-					addMoreText('Shadow Mario', 40);
-					addMoreText('Riveren', 40);
+					addMoreText('Nyxen Roaring', 40);
+					addMoreText('Toji', 40);
 				case 5:
 					deleteCoolText();
 				case 6:
-					createCoolText(['Not associated', 'with'], -40);
+					createCoolText(['Nyxen Es Weon', 'Y Presentando'], -40);
 				case 8:
-					addMoreText('newgrounds', -40);
+					addMoreText('NewGrounds Un Lugar Para Todos', -40);
 					ngSpr.visible = true;
 				case 9:
 					deleteCoolText();
@@ -540,11 +553,11 @@ class TitleState extends MusicBeatState
 				case 13:
 					deleteCoolText();
 				case 14:
-					addMoreText('Friday');
+					addMoreText('Viernes');
 				case 15:
-					addMoreText('Night');
+					addMoreText('Noche');
 				case 16:
-					addMoreText('Funkin'); // credTextShit.text += '\nFunkin';
+					addMoreText('Loca'); // credTextShit.text += '\nFunkin';
 
 				case 17:
 					skipIntro();

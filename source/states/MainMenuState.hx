@@ -5,6 +5,9 @@ import flixel.effects.FlxFlicker;
 import lime.app.Application;
 import states.editors.MasterEditorMenu;
 import options.OptionsState;
+import mobile.backend.MobileScaleMode;
+import openfl.utils.AssetType;
+import haxe.Json;
 
 enum MainMenuColumn {
 	LEFT;
@@ -23,16 +26,13 @@ class MainMenuState extends MusicBeatState
 	var leftItem:FlxSprite;
 	var rightItem:FlxSprite;
 
-	//Centered/Text options
-	var optionShit:Array<String> = [
-		'story_mode',
-		'freeplay',
-		#if MODS_ALLOWED 'mods', #end
-		'credits'
-	];
+	// Opciones del menú: se cargan de data/mainmenu.json (editable). Si no existe, se usan las de siempre.
+	var optionShit:Array<String> = [];            // columna del centro, en orden
+	var actions:Map<String, String> = new Map();  // id -> acción (story_mode, freeplay, options...)
+	var images:Map<String, String> = new Map();   // id -> imagen (opcional)
 
-	var leftOption:String = #if ACHIEVEMENTS_ALLOWED 'achievements' #else null #end;
-	var rightOption:String = 'options';
+	var leftOption:String = null;
+	var rightOption:String = null;
 
 	var magenta:FlxSprite;
 	var camFollow:FlxObject;
@@ -54,13 +54,18 @@ class MainMenuState extends MusicBeatState
 
 		persistentUpdate = persistentDraw = true;
 
+		loadMenuConfig();
+		if (curSelected >= optionShit.length) curSelected = 0;
+		if ((curColumn == LEFT && leftOption == null) || (curColumn == RIGHT && rightOption == null)) curColumn = CENTER;
+
+		// Pixeles extra a cada lado cuando hay pantalla ancha (0 en 16:9)
+		var cutX:Float = MobileScaleMode.gameCutoutSize.x;
+
 		var yScroll:Float = 0.25;
 		var bg:FlxSprite = new FlxSprite(-80).loadGraphic(Paths.image('menuBG'));
 		bg.antialiasing = ClientPrefs.data.antialiasing;
 		bg.scrollFactor.set(0, yScroll);
-		bg.setGraphicSize(Std.int(bg.width * 1.175));
-		bg.updateHitbox();
-		bg.screenCenter();
+		fitWide(bg, 1.175);
 		add(bg);
 
 		camFollow = new FlxObject(0, 0, 1, 1);
@@ -69,9 +74,7 @@ class MainMenuState extends MusicBeatState
 		magenta = new FlxSprite(-80).loadGraphic(Paths.image('menuDesat'));
 		magenta.antialiasing = ClientPrefs.data.antialiasing;
 		magenta.scrollFactor.set(0, yScroll);
-		magenta.setGraphicSize(Std.int(magenta.width * 1.175));
-		magenta.updateHitbox();
-		magenta.screenCenter();
+		fitWide(magenta, 1.175);
 		magenta.visible = false;
 		magenta.color = 0xFFfd719b;
 		add(magenta);
@@ -79,11 +82,13 @@ class MainMenuState extends MusicBeatState
 		menuItems = new FlxTypedGroup<FlxSprite>();
 		add(menuItems);
 
+		var spacing:Float = Math.min(140, 560 / Math.max(1, optionShit.length));
 		for (num => option in optionShit)
 		{
-			var item:FlxSprite = createMenuItem(option, 0, (num * 140) + 90);
-			item.y += (4 - optionShit.length) * 70; // Offsets for when you have anything other than 4 items
+			var item:FlxSprite = createMenuItem(option, 0, 0);
+			item.y = (FlxG.height - optionShit.length * spacing) / 2 + num * spacing + 10;
 			item.screenCenter(X);
+			item.x += cutX;
 		}
 
 		if (leftOption != null)
@@ -91,10 +96,11 @@ class MainMenuState extends MusicBeatState
 		if (rightOption != null)
 		{
 			rightItem = createMenuItem(rightOption, FlxG.width - 60, 490);
+			rightItem.x += cutX * 2;
 			rightItem.x -= rightItem.width;
 		}
 
-		var psychVer:FlxText = new FlxText(12, FlxG.height - 44, 0, "Psych Engine v" + psychEngineVersion, 12);
+		var psychVer:FlxText = new FlxText(12, FlxG.height - 44, 0, "NixerEngine v" + psychEngineVersion, 12);
 		psychVer.scrollFactor.set();
 		psychVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(psychVer);
@@ -128,19 +134,107 @@ class MainMenuState extends MusicBeatState
 		addTouchPad('NONE', 'E');
 	}
 
+	// Escala un fondo para que cubra toda la pantalla ancha y lo centra
+	function fitWide(spr:FlxSprite, baseScale:Float):Void
+	{
+		var wideW:Float = FlxG.width + MobileScaleMode.gameCutoutSize.x * 2;
+		var scl:Float = Math.max(baseScale, wideW / spr.width);
+		spr.setGraphicSize(Std.int(spr.width * scl));
+		spr.updateHitbox();
+		spr.x = (wideW - spr.width) / 2;
+		spr.screenCenter(Y);
+	}
+
+	// Carga data/mainmenu.json: { "items": [ {"id":"freeplay","image":"mainmenu/menu_freeplay","action":"freeplay","column":"center","visible":true}, ... ] }
+	function loadMenuConfig():Void
+	{
+		var loaded:Bool = false;
+		try
+		{
+			if (Paths.fileExists('data/mainmenu.json', AssetType.TEXT))
+			{
+				var data:Dynamic = Json.parse(Paths.getTextFromFile('data/mainmenu.json'));
+				var list:Array<Dynamic> = data.items;
+				for (entry in list)
+				{
+					if (entry.visible == false) continue;
+
+					var id:String = Std.string(entry.id);
+					var action:String = (entry.action != null) ? Std.string(entry.action) : id;
+					#if !MODS_ALLOWED
+					if (action == 'mods') continue;
+					#end
+					#if !ACHIEVEMENTS_ALLOWED
+					if (action == 'achievements') continue;
+					#end
+
+					actions.set(id, action);
+					if (entry.image != null) images.set(id, Std.string(entry.image));
+
+					var column:String = (entry.column != null) ? Std.string(entry.column) : 'center';
+					if (column == 'left') { if (leftOption == null) leftOption = id; }
+					else if (column == 'right') { if (rightOption == null) rightOption = id; }
+					else optionShit.push(id);
+					loaded = true;
+				}
+			}
+		}
+		catch (e:Dynamic)
+		{
+			trace('mainmenu.json tiene un error: ' + e);
+			loaded = false;
+		}
+
+		if (!loaded)
+		{
+			optionShit = ['freeplay', #if MODS_ALLOWED 'mods', #end 'credits', 'bio'];
+			leftOption = #if ACHIEVEMENTS_ALLOWED 'achievements' #else null #end;
+			rightOption = 'options';
+			actions = new Map();
+			images = new Map();
+		}
+		if (optionShit.length == 0)
+			optionShit.push('freeplay');
+	}
+
 	function createMenuItem(name:String, x:Float, y:Float):FlxSprite
 	{
+		var imageKey:String = images.exists(name) ? images.get(name) : 'mainmenu/menu_$name';
 		var menuItem:FlxSprite = new FlxSprite(x, y);
-		menuItem.frames = Paths.getSparrowAtlas('mainmenu/menu_$name');
-		menuItem.animation.addByPrefix('idle', '$name idle', 24, true);
-		menuItem.animation.addByPrefix('selected', '$name selected', 24, true);
-		menuItem.animation.play('idle');
+		if (!Paths.fileExists('images/' + imageKey + '.xml', AssetType.TEXT) && Paths.fileExists('images/' + imageKey + '.png', AssetType.IMAGE))
+		{
+			// Imagen fija (sin animaciones)
+			menuItem.loadGraphic(Paths.image(imageKey));
+		}
+		else
+		{
+			menuItem.frames = Paths.getSparrowAtlas(imageKey);
+			menuItem.animation.addByPrefix('idle', '$name idle', 24, true);
+			menuItem.animation.addByPrefix('selected', '$name selected', 24, true);
+			menuItem.animation.play('idle');
+		}
 		menuItem.updateHitbox();
 		
 		menuItem.antialiasing = ClientPrefs.data.antialiasing;
 		menuItem.scrollFactor.set();
 		menuItems.add(menuItem);
 		return menuItem;
+	}
+
+	// Marca/desmarca un item (con animación o, si es imagen fija, con brillo y tamaño)
+	function setSelectedLook(item:FlxSprite, selected:Bool):Void
+	{
+		if (item.animation.exists('idle'))
+		{
+			item.animation.play(selected ? 'selected' : 'idle');
+			item.centerOffsets();
+		}
+		else
+		{
+			item.alpha = selected ? 1 : 0.65;
+			var sc:Float = selected ? 1.08 : 1;
+			item.scale.set(sc, sc);
+		}
 	}
 
 	var selectedSomethin:Bool = false;
@@ -293,7 +387,7 @@ class MainMenuState extends MusicBeatState
 
 				FlxFlicker.flicker(item, 1, 0.06, false, false, function(flick:FlxFlicker)
 				{
-					switch (option)
+					switch (actions.exists(option) ? actions.get(option) : option)
 					{
 						case 'story_mode':
 							MusicBeatState.switchState(new StoryMenuState());
@@ -312,6 +406,8 @@ class MainMenuState extends MusicBeatState
 
 						case 'credits':
 							MusicBeatState.switchState(new CreditsState());
+						case 'bio' | 'biogallery':
+							MusicBeatState.switchState(new BioGalleryState());
 						case 'options':
 							MusicBeatState.switchState(new OptionsState());
 							OptionsState.onPlayState = false;
@@ -358,10 +454,7 @@ class MainMenuState extends MusicBeatState
 		FlxG.sound.play(Paths.sound('scrollMenu'));
 
 		for (item in menuItems)
-		{
-			item.animation.play('idle');
-			item.centerOffsets();
-		}
+			setSelectedLook(item, false);
 
 		var selectedItem:FlxSprite;
 		switch(curColumn)
@@ -373,8 +466,7 @@ class MainMenuState extends MusicBeatState
 			case RIGHT:
 				selectedItem = rightItem;
 		}
-		selectedItem.animation.play('selected');
-		selectedItem.centerOffsets();
+		setSelectedLook(selectedItem, true);
 		camFollow.y = selectedItem.getGraphicMidpoint().y;
 	}
 }

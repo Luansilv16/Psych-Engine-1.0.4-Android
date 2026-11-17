@@ -122,6 +122,24 @@ class TouchPad extends MobileInputManager implements IMobileControls
 			case NONE: // nothing
 		}
 
+		// Pantalla ancha: los botones de la izquierda ya están en el borde izquierdo;
+		// los de la derecha se corren para quedar en el borde derecho (la cámara de controles ocupa toda la pantalla).
+		var cut:Float = mobile.backend.MobileScaleMode.gameCutoutSize.x;
+		if (cut > 0)
+		{
+			for (fieldName in Reflect.fields(this))
+			{
+				var field = Reflect.field(this, fieldName);
+				if (Std.isOfType(field, TouchButton) && !fieldName.toLowerCase().contains('extra'))
+				{
+					var btn:TouchButton = cast field;
+					if (members.contains(btn))
+						if (btn.x + btn.width / 2 >= FlxG.width / 2)
+							btn.x += cut * 2; // los de la derecha se pegan al borde derecho
+				}
+			}
+		}
+
 		alpha = ClientPrefs.data.controlsAlpha;
 		scrollFactor.set();
 		updateTrackedButtons();
@@ -218,4 +236,15 @@ class TouchPad extends MobileInputManager implements IMobileControls
 		forEachAlive((button:TouchButton) -> button.parentAlpha = Value);
 		return super.set_alpha(Value);
 	}
+
+	@:noCompletion
+	override function set_cameras(Value:Array<flixel.FlxCamera>):Array<flixel.FlxCamera>
+	{
+		// Los controles táctiles usan una cámara que ocupa toda la pantalla
+		if (Value != null)
+			for (cam in Value)
+				mobile.backend.MobileScaleMode.makeFullWidth(cam);
+		return super.set_cameras(Value);
+	}
 }
+

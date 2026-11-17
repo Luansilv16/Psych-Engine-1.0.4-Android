@@ -24,7 +24,7 @@ on:
 
 env:
   HAXE_VERSION: 4.3.6
-  PROJECT_NAME: PsychEngine
+  PROJECT_NAME: NixerEngine
 
 jobs:
   build:
@@ -47,10 +47,6 @@ jobs:
           ndk-version: r27c
           add-to-path: false
 
-      - name: Install libVLC
-        if: contains(inputs.name, 'Linux')
-        run: sudo apt install libvlc-dev libvlccore-dev
-
       - name: Install Libraries
         run: ${{ inputs.setupCommand }}
 
@@ -59,22 +55,11 @@ jobs:
         run: |
           haxelib run lime config ANDROID_SDK $ANDROID_HOME
           haxelib run lime config ANDROID_NDK_ROOT ${{ steps.setup-ndk.outputs.ndk-path }}
-          haxelib run lime config JAVA_HOME $JAVA_HOME_17_arm64
+          haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
           haxelib run lime config ANDROID_SETUP true
 
       - name: Compile
         run: haxelib run lime build ${{ inputs.buildArgs }}
-
-      - name: Make IPA
-        if: inputs.name == 'iOS'
-        run: |
-          brew install ldid
-          cd export/release/ios/build/Release-iphoneos/${{ env.PROJECT_NAME }}.app
-          ldid -S../../../${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.entitlements ${{ env.PROJECT_NAME }}
-          cd ..
-          mkdir Payload
-          mv ${{ env.PROJECT_NAME }}.app Payload
-          zip -r ${{ env.PROJECT_NAME }}.ipa Payload
 
       - name: Upload Artifact
         uses: actions/upload-artifact@main

@@ -1,0 +1,67 @@
+{
+	"characters": [
+		{
+			"name": "Alone",
+			"icon": "alone",
+			"image": "bio/Alone",
+			"color": "#FF5A1F",
+			"role": "Fugitivo de Sprite of Hell",
+			"bio": "Viene de un universo de Sonic.exe Spirit of Hell. Logró liberarse de Exeller y escapó de su universo.",
+			"details": ["Origen: Sonic.exe Spirit of Hell", "Se liberó de: Exeller", "Estado: Escapó de su universo"]
+		},
+		{
+			"name": "Grabiel",
+			"icon": "grabiel",
+			"image": "bio/Grabiel",
+			"color": "#C2306A",
+			"role": "Gamer accidental",
+			"bio": "Un gamer que cayó por accidente en este lugar y decidió quedarse porque le agradó.",
+			"details": ["Llegó: Por accidente", "Ex-pareja: Marcos"]
+		},
+		{
+			"name": "Marcos",
+			"icon": "marcos",
+			"image": "bio/Marcos",
+			"color": "#00F5A0",
+			"role": "Ex-pareja de Grabiel",
+			"bio": "Ex-pareja de Grabiel. Cayeron juntos a este lugar tras una discusión en el hotel.",
+			"details": ["Llegó: Junto a Grabiel", "Motivo: Discusión en el hotel"]
+		},
+		{
+			"name": "Pura",
+			"icon": "pura",
+			"image": "bio/Pura",
+			"color": "#3DFF9A",
+			"role": "Sobreviviente del vacío",
+			"bio": "Viene de un universo donde ya no queda nada, donde la tortura y el dolor son el pan de cada día.",
+			"details": ["Origen: Universo sin nada", "Vida allá: Tortura y dolor"]
+		},
+		{
+			"name": "Luis",
+			"icon": "luis",
+			"image": "bio/Luis",
+			"color": "#FFD94A",
+			"role": "Caníbal en reforma",
+			"bio": "Viene de un universo de los Backrooms, de donde escapó con ganas de ser mejor. Sigue siendo caníbal, pero solo come cuerpos.",
+			"details": ["Origen: Backrooms", "Compañera: Paula", "Dieta: Solo cuerpos"]
+		},
+		{
+			"name": "Paula",
+			"icon": "paula",
+			"image": "bio/Paula",
+			"color": "#8A4DFF",
+			"role": "Guardiana de Luis",
+			"bio": "Viene del mismo universo que Luis y cuida de él. Se tratan como amigos, aunque ella está enamorada de Luis y él no se da cuenta.",
+			"details": ["Origen: Backrooms", "Amigo: Luis", "Secreto: Está enamorada de Luis"]
+		},
+		{
+			"name": "Kino",
+			"icon": "kino",
+			"image": "bio/Kino",
+			"color": "#FF3B5C",
+			"role": "Villano retirado",
+			"bio": "Viene del universo de Lioren, del Changed Special Edition. Dejó el mal atrás para enfocarse en sí mismo.",
+			"details": ["Origen: Changed Special Edition", "Universo de: Lioren"]
+		}
+	]
+}

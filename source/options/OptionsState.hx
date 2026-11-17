@@ -2,12 +2,13 @@ package options;
 
 import states.MainMenuState;
 import backend.StageData;
+import mobile.backend.MobileScaleMode;
 
 class OptionsState extends MusicBeatState
 {
 	var options:Array<String> = [
 		'Note Colors',
-		'Controls',
+		// 'Controls', // ← eliminado (controles de PC)
 		'Adjust Delay and Combo',
 		'Graphics',
 		'Visuals',
@@ -29,8 +30,8 @@ class OptionsState extends MusicBeatState
 		{
 			case 'Note Colors':
 				openSubState(new options.NotesColorSubState());
-			case 'Controls':
-				openSubState(new options.ControlsSubState());
+			// case 'Controls':
+			// 	openSubState(new options.ControlsSubState());
 			case 'Graphics':
 				openSubState(new options.GraphicsSettingsSubState());
 			case 'Visuals':
@@ -60,18 +61,16 @@ class OptionsState extends MusicBeatState
 		bg.color = 0xFFea71fd;
 		bg.updateHitbox();
 
+		// Que el fondo cubra toda la pantalla (pantalla ancha)
+		var wideW:Float = FlxG.width + MobileScaleMode.gameCutoutSize.x * 2;
+		var bgScale:Float = Math.max(wideW / bg.width, FlxG.height / bg.height);
+		bg.setGraphicSize(Std.int(bg.width * bgScale));
+		bg.updateHitbox();
+
 		bg.screenCenter();
 		add(bg);
 
-		if (controls.mobileC)
-		{
-			var tipText:FlxText = new FlxText(150, FlxG.height - 24, 0, 'Press ' + (FlxG.onMobile ? 'C' : 'CTRL or C') + ' to Go Mobile Controls Menu', 16);
-			tipText.setFormat("VCR OSD Mono", 17, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			tipText.borderSize = 1.25;
-			tipText.scrollFactor.set();
-			tipText.antialiasing = ClientPrefs.data.antialiasing;
-			add(tipText);
-		}
+		// Se eliminó el tipText de "Press C to Go Mobile Controls Menu"
 
 		grpOptions = new FlxTypedGroup<Alphabet>();
 		add(grpOptions);
@@ -92,8 +91,7 @@ class OptionsState extends MusicBeatState
 		changeSelection();
 		ClientPrefs.saveSettings();
 
-		addTouchPad('UP_DOWN', 'A_B_C');
-
+		addTouchPad('UP_DOWN', 'A_B'); // ← sin C
 		super.create();
 	}
 
@@ -106,7 +104,7 @@ class OptionsState extends MusicBeatState
 		#end
 		controls.isInSubstate = false;
 		removeTouchPad();
-		addTouchPad('UP_DOWN', 'A_B_C');
+		addTouchPad('UP_DOWN', 'A_B'); // ← sin C
 		persistentUpdate = true;
 	}
 
@@ -120,11 +118,7 @@ class OptionsState extends MusicBeatState
 			if (controls.UI_DOWN_P)
 				changeSelection(1);
 			
-			if (touchPad.buttonC.justPressed || FlxG.keys.justPressed.CONTROL && controls.mobileC)
-			{
-				persistentUpdate = false;
-				openSubState(new mobile.substates.MobileControlSelectSubState());
-			}
+			// Se eliminó la detección de C / CONTROL para abrir MobileControlSelectSubState
 
 			if (controls.BACK)
 			{
